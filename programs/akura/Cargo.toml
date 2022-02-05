@@ -1,8 +1,9 @@
 [package]
 name = "akura"
 version = "0.1.0"
-description = "Created with Anchor"
-edition = "2018"
+description = "Protocol for index & actively managed funds on Solana."
+edition = "2021"
+repository = "https://github.com/udbhav1/akura"
 
 [lib]
 crate-type = ["cdylib", "lib"]

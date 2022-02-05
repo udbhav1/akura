@@ -89,7 +89,7 @@ pub fn transfer_sol<'info>(
 }
 
 // https://hackmd.io/XP15aqlzSbG8XbGHXmIRhg
-// program account owns the auction pda
+// program account owns the pda
 pub fn transfer_from_owned_account(
     src: &mut AccountInfo,
     dst: &mut AccountInfo,
@@ -106,11 +106,6 @@ pub fn transfer_from_owned_account(
         .ok_or(ProgramError::InvalidArgument)?;
 
     Ok(())
-}
-
-pub fn name_seed(name: &str) -> &[u8] {
-    let b = name.as_bytes();
-    if b.len() > 32 { &b[0..32] } else { b }
 }
 
 #[macro_export]
