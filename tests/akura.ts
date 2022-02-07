@@ -54,15 +54,42 @@ async function getTokenBalance(program, tokenAccountAddress: web3.PublicKey): Pr
   return res.value;
 }
 
-async function deriveFundAddress(program,
+async function deriveFundAddress(
+  program,
   managerAddress: web3.PublicKey,
   fundName: string
 ): Promise<[fundAddress: web3.PublicKey, bump: number]> {
+  let name = Buffer.from(fundName);
   const [fundAddress, bump] = await anchor.web3.PublicKey.findProgramAddress(
     [Buffer.from("akura fund"), managerAddress.toBytes()],
     program.programId
   )
   return [fundAddress, bump];
+}
+
+async function deriveMintAddress(
+  program,
+  managerAddress: web3.PublicKey,
+  fundName: string
+): Promise<[mintAddress: web3.PublicKey, bump: number]> {
+  const [mintAddress, bump] = await anchor.web3.PublicKey.findProgramAddress(
+    [Buffer.from("akura fund mint"), managerAddress.toBytes()],
+    program.programId
+  )
+  return [mintAddress, bump];
+}
+
+async function genRemainingAccounts(
+  fundAddress: web3.PublicKey,
+  mints: web3.PublicKey[]
+  ): Promise<any> {
+  let res = []
+  for(let mint of mints){
+    let ata = await serumAta.getAssociatedTokenAddress(fundAddress, mint);
+    res.push({pubkey: mint, isSigner: false, isWritable: true});
+    res.push({pubkey: ata, isSigner: false, isWritable: true});
+  }
+  return res;
 }
 
 anchor.setProvider(anchor.Provider.env());
@@ -73,49 +100,73 @@ describe('akura', () => {
 
   let manager;
   let fundAddress;
-  let bump;
+  let mintOwner;
+  let mintBump;
   let solMint;
   let srmMint;
+  let fundTokenMint;
+  let fundBump;
 
   it('create fund', async () => {
 
     manager = anchor.web3.Keypair.generate();
-    solMint = anchor.web3.Keypair.generate();
-    srmMint = anchor.web3.Keypair.generate();
+    mintOwner = anchor.web3.Keypair.generate();
 
     await airdrop(program, manager.publicKey, lamports(5));
-    await airdrop(program, solMint.publicKey, lamports(5));
-    await airdrop(program, srmMint.publicKey, lamports(5));
+    await airdrop(program, mintOwner.publicKey, lamports(5));
+
+    solMint = await splToken.Token.createMint(
+      program.provider.connection,
+      mintOwner,
+      mintOwner.publicKey,
+      null,
+      9,
+      splToken.TOKEN_PROGRAM_ID
+    );
+    srmMint = await splToken.Token.createMint(
+      program.provider.connection,
+      mintOwner,
+      mintOwner.publicKey,
+      null,
+      6,
+      splToken.TOKEN_PROGRAM_ID
+    );
 
     let fundName = "defi index";
     let fundSymbol = "DEFI";
     let num_assets = 2;
     let assets = [solMint.publicKey, srmMint.publicKey];
     let weights = [new anchor.BN(1), new anchor.BN(1)];
-    [fundAddress, bump] = await deriveFundAddress(program, manager.publicKey, fundName);
+    [fundAddress, fundBump] = await deriveFundAddress(program, manager.publicKey, fundName);
+    [fundTokenMint, mintBump] = await deriveMintAddress(program, manager.publicKey, fundName);
+
+    // mints and atas for underlying tokens
+    let remainingAccounts = await genRemainingAccounts(fundAddress, assets);
 
     await program.rpc.createFund(strToU8(fundName) as any,
                                  strToU8(fundSymbol) as any,
                                  new anchor.BN(num_assets),
-                                 assets,
                                  weights,
-                                 new anchor.BN(bump), {
+                                 new anchor.BN(fundBump),
+                                 new anchor.BN(mintBump), {
         accounts: {
           fund: fundAddress,
           manager: manager.publicKey,
+          indexTokenMint: fundTokenMint,
           tokenProgram: splToken.TOKEN_PROGRAM_ID,
           ataProgram: serumAta.ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: anchor.web3.SystemProgram.programId,
-          rentSysvar: web3.SYSVAR_RENT_PUBKEY,
+          rent: web3.SYSVAR_RENT_PUBKEY,
         },
         signers: [manager],
+        remainingAccounts,
     });
 
   });
 
   it('fetch fund', async () => {
     const fundAccounts = await program.account.fund.all();
-    // console.log(fundAccounts[0]);
+    // console.log(fundAccounts[0].account.assets);
     assert.equal(fundAccounts.length, 1);
   });
 

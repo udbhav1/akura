@@ -15,8 +15,9 @@ pub struct Fund {
     pub weights: [u64; MAX_ASSETS],
     pub tvl: u64,
 
-    pub fund_token: Pubkey,
-    pub fund_token_supply: u64,
+    pub index_token_mint: Pubkey,
+    pub mint_bump: u8,
+    pub index_token_supply: u64,
 
-    pub bump: u8,
+    pub fund_bump: u8,
 }
