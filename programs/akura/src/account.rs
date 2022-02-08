@@ -13,10 +13,10 @@ pub struct Fund {
     pub num_assets: u8,
     pub assets: [Pubkey; MAX_ASSETS],
     pub weights: [u64; MAX_ASSETS],
-    pub tvl: u64,
 
     pub index_token_mint: Pubkey,
     pub mint_bump: u8,
+    // doubles as tvl since its 1:1 with deposit currency
     pub index_token_supply: u64,
 
     pub fund_bump: u8,

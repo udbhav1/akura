@@ -98,6 +98,7 @@ const program = anchor.workspace.Akura as Program<Akura>;
 
 describe('akura', () => {
 
+  let temp;
   let manager;
   let fundAddress;
   let mintOwner;
@@ -106,6 +107,9 @@ describe('akura', () => {
   let srmMint;
   let fundTokenMint;
   let fundBump;
+  let buyer;
+  let buyerFundAta;
+  let buyAmount;
 
   it('create fund', async () => {
 
@@ -137,6 +141,7 @@ describe('akura', () => {
     let num_assets = 2;
     let assets = [solMint.publicKey, srmMint.publicKey];
     let weights = [new anchor.BN(1), new anchor.BN(1)];
+    let fundTokenDecimals = 9;
     [fundAddress, fundBump] = await deriveFundAddress(program, manager.publicKey, fundName);
     [fundTokenMint, mintBump] = await deriveMintAddress(program, manager.publicKey, fundName);
 
@@ -147,6 +152,7 @@ describe('akura', () => {
                                  strToU8(fundSymbol) as any,
                                  new anchor.BN(num_assets),
                                  weights,
+                                 new anchor.BN(fundTokenDecimals),
                                  new anchor.BN(fundBump),
                                  new anchor.BN(mintBump), {
         accounts: {
@@ -164,9 +170,56 @@ describe('akura', () => {
 
   });
 
+  it('buy fund', async () => {
+    buyer = anchor.web3.Keypair.generate();
+    await airdrop(program, buyer.publicKey, lamports(5));
+
+    buyerFundAta = await serumAta.getAssociatedTokenAddress(buyer.publicKey, fundTokenMint);
+
+    buyAmount = lamports(1);
+
+    await program.rpc.buyFund(new anchor.BN(buyAmount), {
+        accounts: {
+          fund: fundAddress,
+          indexTokenMint: fundTokenMint,
+          buyer: buyer.publicKey,
+          buyerAta: buyerFundAta,
+          tokenProgram: splToken.TOKEN_PROGRAM_ID,
+          associatedTokenProgram: serumAta.ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          rent: web3.SYSVAR_RENT_PUBKEY,
+        },
+        signers: [buyer],
+    });
+
+    temp = await getLamportBalance(program, buyer.publicKey);
+    assert.ok(temp < lamports(5)); 
+    console.log(lamports(5) - temp);
+
+    temp = await getTokenBalance(program, buyerFundAta);
+    assert.equal(temp.amount, buyAmount); 
+  });
+
+  it('sell fund', async () => {
+    await program.rpc.sellFund(new anchor.BN(buyAmount), {
+        accounts: {
+          fund: fundAddress,
+          indexTokenMint: fundTokenMint,
+          seller: buyer.publicKey,
+          sellerAta: buyerFundAta,
+          tokenProgram: splToken.TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+        signers: [buyer],
+    });
+
+    temp = await getTokenBalance(program, buyerFundAta);
+    assert.equal(temp.amount, 0); 
+  });
+
   it('fetch fund', async () => {
     const fundAccounts = await program.account.fund.all();
-    // console.log(fundAccounts[0].account.assets);
+    // console.log(fundAccounts[0].account);
     assert.equal(fundAccounts.length, 1);
   });
 

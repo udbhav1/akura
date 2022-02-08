@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token};
+use anchor_spl::token::{Mint, Token, TokenAccount};
 use anchor_spl::associated_token::AssociatedToken;
 use crate::account::*;
 
@@ -9,6 +9,7 @@ use crate::account::*;
     symbol: [u8; 4],
     num_assets: u8,
     weights: [u64; 5],
+    token_decimals: u8,
     fund_bump: u8,
     mint_bump: u8
 )]
@@ -26,7 +27,7 @@ pub struct CreateFund<'info> {
         seeds = [b"akura fund mint", manager.to_account_info().key.as_ref()],
         bump = mint_bump,
         payer = manager,
-        mint::decimals = 9,
+        mint::decimals = token_decimals,
         mint::authority = index_token_mint
     )]
     pub index_token_mint: Account<'info, Mint>,
@@ -54,8 +55,17 @@ pub struct BuyFund<'info> {
     pub index_token_mint: Account<'info, Mint>,
     #[account(mut)]
     pub buyer: Signer<'info>,
+    #[account(
+        init_if_needed,
+        payer = buyer,
+        associated_token::mint = index_token_mint,
+        associated_token::authority = buyer
+    )]
+    pub buyer_ata: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>
 }
 
 #[derive(Accounts)]
@@ -65,7 +75,9 @@ pub struct SellFund<'info> {
     #[account(mut)]
     pub index_token_mint: Account<'info, Mint>,
     #[account(mut)]
-    pub buyer: Signer<'info>,
+    pub seller: Signer<'info>,
+    #[account(mut)]
+    pub seller_ata: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>
 }

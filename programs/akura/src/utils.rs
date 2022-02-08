@@ -108,6 +108,66 @@ pub fn transfer_from_owned_account(
     Ok(())
 }
 
+pub fn mint_index<'info>(
+    mint: AccountInfo<'info>,
+    mint_owner: AccountInfo<'info>,
+    dst: AccountInfo<'info>,
+    amount: u64,
+    token_program: AccountInfo<'info>,
+    signer_seeds: &[&[&[u8]]]
+) -> ProgramResult {
+
+    invoke_signed(
+        &spl_token::instruction::mint_to(
+            &token_program.key(),
+            &mint.key(),
+            &dst.key(),
+            &mint_owner.key(),
+            &[],
+            amount,
+        )?,
+        &[
+            mint.to_account_info(),
+            dst.to_account_info(),
+            mint_owner.to_account_info(),
+            token_program.to_account_info()
+        ],
+        signer_seeds,
+    )?;
+
+    Ok(())
+}
+
+pub fn burn_index<'info>(
+    mint: AccountInfo<'info>,
+    dst_owner: AccountInfo<'info>,
+    dst: AccountInfo<'info>,
+    amount: u64,
+    token_program: AccountInfo<'info>,
+    signer_seeds: &[&[&[u8]]]
+) -> ProgramResult {
+
+    invoke_signed(
+        &spl_token::instruction::burn(
+            &token_program.key(),
+            &dst.key(),
+            &mint.key(),
+            &dst_owner.key(),
+            &[],
+            amount,
+        )?,
+        &[
+            mint.to_account_info(),
+            dst.to_account_info(),
+            dst_owner.to_account_info(),
+            token_program.to_account_info()
+        ],
+        signer_seeds,
+    )?;
+
+    Ok(())
+}
+
 #[macro_export]
 macro_rules! require{
        ($a:expr,$b:expr)=>{
