@@ -194,7 +194,6 @@ describe('akura', () => {
 
     temp = await getLamportBalance(program, buyer.publicKey);
     assert.ok(temp < lamports(5)); 
-    console.log(lamports(5) - temp);
 
     temp = await getTokenBalance(program, buyerFundAta);
     assert.equal(temp.amount, buyAmount); 

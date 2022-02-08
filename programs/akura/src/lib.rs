@@ -19,7 +19,7 @@ pub mod akura {
         symbol: [u8; 4],
         num_assets: u8,
         weights: [u64; 5],
-        token_decimals: u8,
+        _token_decimals: u8,
         fund_bump: u8,
         mint_bump: u8,
     ) -> ProgramResult {
