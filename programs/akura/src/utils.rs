@@ -38,6 +38,33 @@ pub fn create_ata<'info>(
     Ok(())
 }
 
+pub fn create_ata_if_necessary<'info>(
+    payer: AccountInfo<'info>,
+    wallet: AccountInfo<'info>,
+    mint: AccountInfo<'info>,
+    ata: AccountInfo<'info>,
+    token_program: AccountInfo<'info>,
+    ata_program: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+    rent_sysvar: AccountInfo<'info>,
+) -> ProgramResult {
+
+    if ata.to_account_info().data_is_empty() {
+        create_ata(
+            payer,
+            wallet,
+            mint,
+            ata,
+            token_program,
+            ata_program,
+            system_program,
+            rent_sysvar
+        )?;
+    }
+
+    Ok(())
+}
+
 pub fn transfer_spl<'info>(
     src: AccountInfo<'info>,
     src_ata: AccountInfo<'info>,
@@ -108,7 +135,7 @@ pub fn transfer_from_owned_account(
     Ok(())
 }
 
-pub fn mint_index<'info>(
+pub fn mint_spl<'info>(
     mint: AccountInfo<'info>,
     mint_owner: AccountInfo<'info>,
     dst: AccountInfo<'info>,
@@ -138,7 +165,7 @@ pub fn mint_index<'info>(
     Ok(())
 }
 
-pub fn burn_index<'info>(
+pub fn burn_spl<'info>(
     mint: AccountInfo<'info>,
     dst_owner: AccountInfo<'info>,
     dst: AccountInfo<'info>,

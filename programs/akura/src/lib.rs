@@ -27,7 +27,7 @@ pub mod akura {
         let manager = &ctx.accounts.manager;
         let index_token_mint = &ctx.accounts.index_token_mint;
         let token_program = &ctx.accounts.token_program;
-        let ata_program = &ctx.accounts.ata_program;
+        let ata_program = &ctx.accounts.associated_token_program;
         let system_program = &ctx.accounts.system_program;
         let rent_sysvar = &ctx.accounts.rent;
 
@@ -60,7 +60,8 @@ pub mod akura {
 
             fund.assets[i as usize] = *asset_mint.key;
 
-            create_ata(
+            // if usdc is in the pool then dont need to re init ata
+            create_ata_if_necessary(
                 manager.to_account_info(),
                 fund.to_account_info(),
                 asset_mint.to_account_info(),
@@ -80,6 +81,7 @@ pub mod akura {
         new_manager: Pubkey
     ) -> ProgramResult {
         let fund: &mut Account<Fund> = &mut ctx.accounts.fund;
+
         fund.manager = new_manager;
 
         Ok(())
@@ -90,42 +92,31 @@ pub mod akura {
         amount: u64
     ) -> ProgramResult {
         let fund: &mut Account<Fund> = &mut ctx.accounts.fund;
-        let mint = &ctx.accounts.index_token_mint;
+        let fund_usdc_ata = &ctx.accounts.fund_usdc_ata;
+        let index_mint = &ctx.accounts.index_token_mint;
         let buyer = &ctx.accounts.buyer;
-        let buyer_ata = &ctx.accounts.buyer_ata;
+        let buyer_usdc_ata = &ctx.accounts.buyer_usdc_ata;
+        let buyer_index_ata = &ctx.accounts.buyer_index_ata;
         let token_program = &ctx.accounts.token_program;
-        // let ata_program = &ctx.accounts.associated_token_program;
         let system_program = &ctx.accounts.system_program;
-        // let rent_sysvar = &ctx.accounts.rent;
 
-        // TODO validate buyer_ata
+        // TODO validate buyer_usdc_ata and buyer_index_ata
 
-        transfer_sol(
+        transfer_spl(
             buyer.to_account_info(),
-            fund.to_account_info(),
+            buyer_usdc_ata.to_account_info(),
+            fund_usdc_ata.to_account_info(),
             amount,
-            system_program.to_account_info()
+            token_program.to_account_info(),
+            &[]
         )?;
 
         // TODO buy underlying tokens and put in fund atas
 
-        // if buyer_ata.to_account_info().data_is_empty() {
-        //     create_ata(
-        //         buyer.to_account_info(),
-        //         buyer.to_account_info(),
-        //         mint.to_account_info(),
-        //         buyer_ata.to_account_info(),
-        //         token_program.to_account_info(),
-        //         ata_program.to_account_info(),
-        //         system_program.to_account_info(),
-        //         rent_sysvar.to_account_info()
-        //     )?;
-        // }
-
-        mint_index(
-            mint.to_account_info(),
-            mint.to_account_info(),
-            buyer_ata.to_account_info(),
+        mint_spl(
+            index_mint.to_account_info(),
+            index_mint.to_account_info(),
+            buyer_index_ata.to_account_info(),
             amount,
             token_program.to_account_info(),
             &[&[b"akura fund mint", fund.manager.as_ref(), &[fund.mint_bump]]]
@@ -147,7 +138,7 @@ pub mod akura {
         let token_program = &ctx.accounts.token_program;
         let _system_program = &ctx.accounts.system_program;
 
-        burn_index(
+        burn_spl(
             mint.to_account_info(),
             seller.to_account_info(),
             seller_ata.to_account_info(),
