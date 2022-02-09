@@ -79,7 +79,7 @@ pub struct BuyFund<'info> {
         associated_token::mint = index_token_mint,
         associated_token::authority = buyer
     )]
-    pub buyer_index_ata: Account<'info, TokenAccount>,
+    pub buyer_index_ata: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,

@@ -1,6 +1,9 @@
 [programs.localnet]
 akura = "4CZ51joXxrsSXBQLXVPS5qbFsXyMCxw3NvGYYPpcmYWo"
 
+[programs.devnet]
+akura = "4CZ51joXxrsSXBQLXVPS5qbFsXyMCxw3NvGYYPpcmYWo"
+
 [registry]
 url = "https://anchor.projectserum.com"
 

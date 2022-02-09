@@ -1,11 +1,11 @@
 pub mod account;
 pub mod context;
-pub mod error;
+pub mod errors;
 pub mod utils;
 use anchor_lang::prelude::*;
 use account::*;
 use context::*;
-use error::*;
+use errors::*;
 use utils::*;
 
 declare_id!("4CZ51joXxrsSXBQLXVPS5qbFsXyMCxw3NvGYYPpcmYWo");
@@ -98,7 +98,7 @@ pub mod akura {
         let buyer_usdc_ata = &ctx.accounts.buyer_usdc_ata;
         let buyer_index_ata = &ctx.accounts.buyer_index_ata;
         let token_program = &ctx.accounts.token_program;
-        let system_program = &ctx.accounts.system_program;
+        let _system_program = &ctx.accounts.system_program;
 
         // TODO validate buyer_usdc_ata and buyer_index_ata
 
