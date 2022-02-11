@@ -82,6 +82,7 @@ pub struct BuyFund<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>
+    // remaining accounts: A/USDC market and fund's open orders account for each asset A
 }
 
 #[derive(Accounts)]

@@ -6,6 +6,7 @@ import * as serumAta from '@project-serum/associated-token'
 import * as web3 from '@solana/web3.js';
 import * as assert from "assert";
 const utils = require("./utils");
+const serumUtils = require("./serumUtils");
 
 anchor.setProvider(anchor.Provider.env());
 
@@ -29,6 +30,68 @@ describe('akura', () => {
   let buyerFundAta;
   let buyAmount;
   let usdcAmount;
+
+// Accounts used to setup the orderbook.
+  let ORDERBOOK_ENV,
+    // Accounts used for A -> USDC swap transactions.
+    SWAP_A_USDC_ACCOUNTS,
+    // Accounts used for  USDC -> A swap transactions.
+    SWAP_USDC_A_ACCOUNTS,
+    // Serum DEX vault PDA for market A/USDC.
+    marketAVaultSigner,
+    // Serum DEX vault PDA for market B/USDC.
+    marketBVaultSigner;
+
+  const openOrdersA = anchor.web3.Keypair.generate();
+  const openOrdersB = anchor.web3.Keypair.generate();
+
+  it('BOILERPLATE: set up serum markets and orderbook', async () => {
+    ORDERBOOK_ENV = await serumUtils.setupTwoMarkets({
+        provider: program.provider,
+      });
+
+    const marketA = ORDERBOOK_ENV.marketA;
+    const marketB = ORDERBOOK_ENV.marketB;
+
+    const [vaultSignerA] = await serumUtils.getVaultOwnerAndNonce(
+      marketA._decoded.ownAddress
+    );
+    const [vaultSignerB] = await serumUtils.getVaultOwnerAndNonce(
+      marketB._decoded.ownAddress
+    );
+    marketAVaultSigner = vaultSignerA;
+    marketBVaultSigner = vaultSignerB;
+
+    SWAP_USDC_A_ACCOUNTS = {
+      market: {
+        market: marketA._decoded.ownAddress,
+        requestQueue: marketA._decoded.requestQueue,
+        eventQueue: marketA._decoded.eventQueue,
+        bids: marketA._decoded.bids,
+        asks: marketA._decoded.asks,
+        coinVault: marketA._decoded.baseVault,
+        pcVault: marketA._decoded.quoteVault,
+        vaultSigner: marketAVaultSigner,
+        // User params.
+        openOrders: openOrdersA.publicKey,
+        orderPayerTokenAccount: ORDERBOOK_ENV.godUsdc,
+        coinWallet: ORDERBOOK_ENV.godA,
+      },
+      pcWallet: ORDERBOOK_ENV.godUsdc,
+      authority: program.provider.wallet.publicKey,
+      dexProgram: serumUtils.DEX_PID,
+      tokenProgram: serumUtils.TOKEN_PROGRAM_ID,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    };
+    SWAP_A_USDC_ACCOUNTS = {
+      ...SWAP_USDC_A_ACCOUNTS,
+      market: {
+        ...SWAP_USDC_A_ACCOUNTS.market,
+        orderPayerTokenAccount: ORDERBOOK_ENV.godA,
+      },
+    };
+    console.log(SWAP_USDC_A_ACCOUNTS);
+  });
 
   it('create fund', async () => {
 
