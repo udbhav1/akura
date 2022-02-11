@@ -10,21 +10,19 @@ use crate::account::*;
     num_assets: u8,
     weights: [u64; 5],
     token_decimals: u8,
-    fund_bump: u8,
-    mint_bump: u8
 )]
 pub struct CreateFund<'info> {
     #[account(
         init,
         // seeds = [b"akura fund", manager.to_account_info().key.as_ref(), String::from_utf8(name.to_vec()).unwrap().as_bytes()],
         seeds = [b"akura fund", manager.to_account_info().key.as_ref()],
-        bump = fund_bump,
+        bump,
         payer = manager
     )]
     pub fund: Account<'info, Fund>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = manager,
         associated_token::mint = usdc_mint,
         associated_token::authority = fund
@@ -34,7 +32,7 @@ pub struct CreateFund<'info> {
     #[account(
         init,
         seeds = [b"akura fund mint", manager.to_account_info().key.as_ref()],
-        bump = mint_bump,
+        bump,
         payer = manager,
         mint::decimals = token_decimals,
         mint::authority = index_token_mint
@@ -89,13 +87,17 @@ pub struct BuyFund<'info> {
 #[derive(Accounts)]
 pub struct SellFund<'info> {
     #[account(mut)]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
     #[account(mut)]
-    pub index_token_mint: Account<'info, Mint>,
+    pub fund_usdc_ata: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
+    pub index_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
     pub seller: Signer<'info>,
     #[account(mut)]
-    pub seller_ata: UncheckedAccount<'info>,
+    pub seller_usdc_ata: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
+    pub seller_index_ata: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>
+    pub system_program: Program<'info, System>,
 }

@@ -167,8 +167,8 @@ pub fn mint_spl<'info>(
 
 pub fn burn_spl<'info>(
     mint: AccountInfo<'info>,
-    dst_owner: AccountInfo<'info>,
     dst: AccountInfo<'info>,
+    dst_owner: AccountInfo<'info>,
     amount: u64,
     token_program: AccountInfo<'info>,
     signer_seeds: &[&[&[u8]]]

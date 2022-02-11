@@ -88,9 +88,7 @@ describe('akura', () => {
                                  utils.strToU8(fundSymbol) as any,
                                  new anchor.BN(num_assets),
                                  weights,
-                                 new anchor.BN(fundTokenDecimals),
-                                 new anchor.BN(fundBump),
-                                 new anchor.BN(mintBump), {
+                                 new anchor.BN(fundTokenDecimals), {
         accounts: {
           fund: fundAddress,
           fundUsdcAta: fundUsdcAta,
@@ -156,17 +154,19 @@ describe('akura', () => {
     await program.rpc.sellFund(new anchor.BN(buyAmount), {
         accounts: {
           fund: fundAddress,
+          fundUsdcAta: fundUsdcAta,
           indexTokenMint: fundTokenMint,
           seller: buyer.publicKey,
-          sellerAta: buyerFundAta,
+          sellerUsdcAta: buyerUsdcAta.address,
+          sellerIndexAta: buyerFundAta,
           tokenProgram: splToken.TOKEN_PROGRAM_ID,
           systemProgram: anchor.web3.SystemProgram.programId,
         },
         signers: [buyer],
     });
 
-    // temp = await utils.getTokenBalance(program, buyerUsdcAta.address);
-    // assert.equal(usdcAmount, temp.amount);
+    temp = await utils.getTokenBalance(program, buyerUsdcAta.address);
+    assert.equal(usdcAmount, temp.amount);
 
     temp = await utils.getTokenBalance(program, buyerFundAta);
     assert.equal(temp.amount, 0); 

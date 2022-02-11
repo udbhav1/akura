@@ -20,8 +20,6 @@ pub mod akura {
         num_assets: u8,
         weights: [u64; 5],
         _token_decimals: u8,
-        fund_bump: u8,
-        mint_bump: u8,
     ) -> ProgramResult {
         let fund = &mut ctx.accounts.fund;
         let manager = &ctx.accounts.manager;
@@ -40,9 +38,9 @@ pub mod akura {
 
         fund.index_token_mint = index_token_mint.key();
         fund.index_token_supply = 0;
-        fund.mint_bump = mint_bump;
+        fund.mint_bump = *ctx.bumps.get("index_token_mint").unwrap();
 
-        fund.fund_bump = fund_bump;
+        fund.fund_bump = *ctx.bumps.get("fund").unwrap();
 
         let remaining = ctx.remaining_accounts.len();
         require!(
@@ -132,16 +130,27 @@ pub mod akura {
         amount: u64
     ) -> ProgramResult {
         let fund: &mut Account<Fund> = &mut ctx.accounts.fund;
+        let fund_usdc_ata = &ctx.accounts.fund_usdc_ata;
         let mint = &ctx.accounts.index_token_mint;
         let seller = &ctx.accounts.seller;
-        let seller_ata = &ctx.accounts.seller_ata;
+        let seller_usdc_ata = &ctx.accounts.seller_usdc_ata;
+        let seller_index_ata = &ctx.accounts.seller_index_ata;
         let token_program = &ctx.accounts.token_program;
         let _system_program = &ctx.accounts.system_program;
 
+        transfer_spl(
+            fund.to_account_info(),
+            fund_usdc_ata.to_account_info(),
+            seller_usdc_ata.to_account_info(),
+            amount,
+            token_program.to_account_info(),
+            &[&[b"akura fund", fund.manager.as_ref(), &[fund.fund_bump]]]
+        )?;
+
         burn_spl(
             mint.to_account_info(),
+            seller_index_ata.to_account_info(),
             seller.to_account_info(),
-            seller_ata.to_account_info(),
             amount,
             token_program.to_account_info(),
             &[&[b"akura fund mint", fund.manager.as_ref(), &[fund.mint_bump]]]
