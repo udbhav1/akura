@@ -22,3 +22,4 @@ anchor-spl = {version = "0.21.0", features = ["dex"]}
 spl-token = {version = "3.3.0", features = ["no-entrypoint"]}
 spl-associated-token-account = "1.0.3"
 serum-swap = { path = "../../deps/swap/programs/swap", features = ["cpi"] }
+serum_dex = { path = "../../deps/serum-dex/dex", features = ["no-entrypoint"] }

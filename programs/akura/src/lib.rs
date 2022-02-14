@@ -42,11 +42,11 @@ pub mod akura {
 
         fund.fund_bump = *ctx.bumps.get("fund").unwrap();
 
-        let remaining = ctx.remaining_accounts.len();
-        require!(
-            remaining == (num_assets*2) as usize,
-            Err(AkuraError::InvalidRemainingAccounts.into())
-        );
+        // let remaining = ctx.remaining_accounts.len();
+        // require!(
+        //     remaining == (num_assets*2) as usize,
+        //     Err(AkuraError::InvalidRemainingAccounts.into())
+        // );
         let remaining_accounts_iter = &mut ctx.remaining_accounts.iter();
 
         for i in 0..num_assets {
@@ -60,18 +60,33 @@ pub mod akura {
 
             // if usdc is in the pool then dont need to re init ata
             create_ata_if_necessary(
-                manager.to_account_info(),
-                fund.to_account_info(),
-                asset_mint.to_account_info(),
-                fund_ata.to_account_info(),
-                token_program.to_account_info(),
-                ata_program.to_account_info(),
-                system_program.to_account_info(),
-                rent_sysvar.to_account_info()
+                &manager.to_account_info(),
+                &fund.to_account_info(),
+                &asset_mint.to_account_info(),
+                &fund_ata.to_account_info(),
+                &token_program.to_account_info(),
+                &ata_program.to_account_info(),
+                &system_program.to_account_info(),
+                &rent_sysvar.to_account_info()
             )?;
         }
 
+        let mngo_open_orders = next_account_info(remaining_accounts_iter)?;
+        let mngo_market = next_account_info(remaining_accounts_iter)?;
+        let dex_program = &ctx.accounts.dex_program;
+
+        init_open_orders_account(
+            &mngo_open_orders.to_account_info(),
+            &fund.to_account_info(),
+            &mngo_market.to_account_info(),
+            &manager.to_account_info(),
+            &dex_program.to_account_info(),
+            rent_sysvar,
+            &[&[b"akura fund", fund.manager.as_ref(), &[fund.fund_bump]]],
+        )?;
+
         Ok(())
+
     }
 
     pub fn set_manager(
@@ -101,22 +116,29 @@ pub mod akura {
         // TODO validate buyer_usdc_ata and buyer_index_ata
 
         transfer_spl(
-            buyer.to_account_info(),
-            buyer_usdc_ata.to_account_info(),
-            fund_usdc_ata.to_account_info(),
+            &buyer.to_account_info(),
+            &buyer_usdc_ata.to_account_info(),
+            &fund_usdc_ata.to_account_info(),
             amount,
-            token_program.to_account_info(),
+            &token_program.to_account_info(),
             &[]
         )?;
 
         // TODO buy underlying tokens and put in fund atas
+        // let exr = serum_swap::ExchangeRate {
+        //     rate: 1,
+        //     from_decimals: 6,
+        //     quote_decimals: 6,
+        //     strict: false
+        // };
+        // serum_swap::cpi::swap(None, serum_swap::Side::Bid, amount, exr);
 
         mint_spl(
-            index_mint.to_account_info(),
-            index_mint.to_account_info(),
-            buyer_index_ata.to_account_info(),
+            &index_mint.to_account_info(),
+            &index_mint.to_account_info(),
+            &buyer_index_ata.to_account_info(),
             amount,
-            token_program.to_account_info(),
+            &token_program.to_account_info(),
             &[&[b"akura fund mint", fund.manager.as_ref(), &[fund.mint_bump]]]
         )?;
 
@@ -139,20 +161,20 @@ pub mod akura {
         let _system_program = &ctx.accounts.system_program;
 
         transfer_spl(
-            fund.to_account_info(),
-            fund_usdc_ata.to_account_info(),
-            seller_usdc_ata.to_account_info(),
+            &fund.to_account_info(),
+            &fund_usdc_ata.to_account_info(),
+            &seller_usdc_ata.to_account_info(),
             amount,
-            token_program.to_account_info(),
+            &token_program.to_account_info(),
             &[&[b"akura fund", fund.manager.as_ref(), &[fund.fund_bump]]]
         )?;
 
         burn_spl(
-            mint.to_account_info(),
-            seller_index_ata.to_account_info(),
-            seller.to_account_info(),
+            &mint.to_account_info(),
+            &seller_index_ata.to_account_info(),
+            &seller.to_account_info(),
             amount,
-            token_program.to_account_info(),
+            &token_program.to_account_info(),
             &[&[b"akura fund mint", fund.manager.as_ref(), &[fund.mint_bump]]]
         )?;
 

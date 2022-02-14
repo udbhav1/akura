@@ -1,19 +1,81 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{
-    system_instruction::transfer,
+    system_instruction,
     program::invoke,
     program::invoke_signed
 };
+use serum_dex::state::OpenOrders;
+use std::mem::size_of;
+use anchor_spl::dex;
+
+pub fn create_account<'info>(
+    new_account: &AccountInfo<'info>,
+    payer: &AccountInfo<'info>,
+    owner: &AccountInfo<'info>,
+    lamports: u64,
+    space: u64,
+ ) -> ProgramResult {
+    invoke(
+        &system_instruction::create_account(
+            &payer.key(),
+            &new_account.key(),
+            lamports,
+            space,
+            &owner.key()
+        ),
+        &[
+            payer.to_account_info(),
+            new_account.to_account_info(),
+        ]
+    )?;
+
+    Ok(())
+}
+
+pub fn init_open_orders_account<'info>(
+    open_orders: &AccountInfo<'info>,
+    authority: &AccountInfo<'info>,
+    market: &AccountInfo<'info>,
+    payer: &AccountInfo<'info>,
+    dex_program: &AccountInfo<'info>,
+    rent_sysvar: &Sysvar<'info, Rent>,
+    signer_seeds: &[&[&[u8]]]
+ ) -> ProgramResult {
+     // 12 is from from anchor cfo example
+    let space = 12 + size_of::<OpenOrders>();
+    let exemption = rent_sysvar.minimum_balance(space);
+
+    create_account(
+        open_orders,
+        payer,
+        dex_program,
+        exemption,
+        space as u64,
+    )?;
+
+    let cpi_accounts = dex::InitOpenOrders {
+        open_orders: open_orders.to_account_info(),
+        authority: authority.to_account_info(),
+        market: market.to_account_info(),
+        rent: rent_sysvar.to_account_info(),
+    };
+
+    let cpi_ctx = CpiContext::new(dex_program.to_account_info(), cpi_accounts);
+
+    dex::init_open_orders(cpi_ctx.with_signer(signer_seeds))?;
+
+    Ok(())
+}
 
 pub fn create_ata<'info>(
-    payer: AccountInfo<'info>,
-    wallet: AccountInfo<'info>,
-    mint: AccountInfo<'info>,
-    ata: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
-    ata_program: AccountInfo<'info>,
-    system_program: AccountInfo<'info>,
-    rent_sysvar: AccountInfo<'info>,
+    payer: &AccountInfo<'info>,
+    wallet: &AccountInfo<'info>,
+    mint: &AccountInfo<'info>,
+    ata: &AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
+    ata_program: &AccountInfo<'info>,
+    system_program: &AccountInfo<'info>,
+    rent_sysvar: &AccountInfo<'info>,
 ) -> ProgramResult {
 
     invoke_signed(
@@ -23,14 +85,14 @@ pub fn create_ata<'info>(
             &mint.key(),
         ),
         &[
-            ata,
-            wallet,
-            mint,
-            payer,
-            token_program,
-            ata_program,
-            system_program,
-            rent_sysvar,
+            ata.to_account_info(),
+            wallet.to_account_info(),
+            mint.to_account_info(),
+            payer.to_account_info(),
+            token_program.to_account_info(),
+            ata_program.to_account_info(),
+            system_program.to_account_info(),
+            rent_sysvar.to_account_info(),
         ],
         &[],
     )?;
@@ -39,14 +101,14 @@ pub fn create_ata<'info>(
 }
 
 pub fn create_ata_if_necessary<'info>(
-    payer: AccountInfo<'info>,
-    wallet: AccountInfo<'info>,
-    mint: AccountInfo<'info>,
-    ata: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
-    ata_program: AccountInfo<'info>,
-    system_program: AccountInfo<'info>,
-    rent_sysvar: AccountInfo<'info>,
+    payer: &AccountInfo<'info>,
+    wallet: &AccountInfo<'info>,
+    mint: &AccountInfo<'info>,
+    ata: &AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
+    ata_program: &AccountInfo<'info>,
+    system_program: &AccountInfo<'info>,
+    rent_sysvar: &AccountInfo<'info>,
 ) -> ProgramResult {
 
     if ata.to_account_info().data_is_empty() {
@@ -66,11 +128,11 @@ pub fn create_ata_if_necessary<'info>(
 }
 
 pub fn transfer_spl<'info>(
-    src: AccountInfo<'info>,
-    src_ata: AccountInfo<'info>,
-    dst_ata: AccountInfo<'info>,
+    src: &AccountInfo<'info>,
+    src_ata: &AccountInfo<'info>,
+    dst_ata: &AccountInfo<'info>,
     amount: u64,
-    token_program: AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
     signer_seeds: &[&[&[u8]]]
 ) -> ProgramResult {
 
@@ -97,14 +159,14 @@ pub fn transfer_spl<'info>(
 
 // transfer from system-owned account
 pub fn transfer_sol<'info>(
-    src: AccountInfo<'info>,
-    dst: AccountInfo<'info>,
+    src: &AccountInfo<'info>,
+    dst: &AccountInfo<'info>,
     amount: u64,
-    system_program: AccountInfo<'info>
+    system_program: &AccountInfo<'info>
 ) -> ProgramResult {
 
     invoke(
-        &transfer(&src.key(), &dst.key(), amount),
+        &system_instruction::transfer(&src.key(), &dst.key(), amount),
         &[
             src.to_account_info(),
             dst.to_account_info(),
@@ -136,11 +198,11 @@ pub fn transfer_from_owned_account(
 }
 
 pub fn mint_spl<'info>(
-    mint: AccountInfo<'info>,
-    mint_owner: AccountInfo<'info>,
-    dst: AccountInfo<'info>,
+    mint: &AccountInfo<'info>,
+    mint_owner: &AccountInfo<'info>,
+    dst: &AccountInfo<'info>,
     amount: u64,
-    token_program: AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
     signer_seeds: &[&[&[u8]]]
 ) -> ProgramResult {
 
@@ -166,11 +228,11 @@ pub fn mint_spl<'info>(
 }
 
 pub fn burn_spl<'info>(
-    mint: AccountInfo<'info>,
-    dst: AccountInfo<'info>,
-    dst_owner: AccountInfo<'info>,
+    mint: &AccountInfo<'info>,
+    dst: &AccountInfo<'info>,
+    dst_owner: &AccountInfo<'info>,
     amount: u64,
-    token_program: AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
     signer_seeds: &[&[&[u8]]]
 ) -> ProgramResult {
 

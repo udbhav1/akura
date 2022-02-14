@@ -19,7 +19,7 @@ pub struct CreateFund<'info> {
         bump,
         payer = manager
     )]
-    pub fund: Account<'info, Fund>,
+    pub fund: Box<Account<'info, Fund>>,
 
     #[account(
         init,
@@ -27,7 +27,7 @@ pub struct CreateFund<'info> {
         associated_token::mint = usdc_mint,
         associated_token::authority = fund
     )]
-    pub fund_usdc_ata: Account<'info, TokenAccount>,
+    pub fund_usdc_ata: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init,
@@ -37,18 +37,21 @@ pub struct CreateFund<'info> {
         mint::decimals = token_decimals,
         mint::authority = index_token_mint
     )]
-    pub index_token_mint: Account<'info, Mint>,
+    pub index_token_mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
     pub manager: Signer<'info>,
 
     // TODO add check
-    pub usdc_mint: Account<'info, Mint>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>
+    pub rent: Sysvar<'info, Rent>,
+
+    pub dex_program: AccountInfo<'info>,
+    // pub dex_program: Program<'info, anchor_spl::dex::Dex>,
 }
 
 #[derive(Accounts)]
