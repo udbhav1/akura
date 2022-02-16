@@ -1,12 +1,14 @@
 pub mod account;
 pub mod context;
 pub mod errors;
+pub mod macros;
 pub mod utils;
 use anchor_lang::prelude::*;
 use account::*;
 use context::*;
 use errors::*;
 use utils::*;
+
 
 declare_id!("4CZ51joXxrsSXBQLXVPS5qbFsXyMCxw3NvGYYPpcmYWo");
 
@@ -27,6 +29,7 @@ pub mod akura {
         let token_program = &ctx.accounts.token_program;
         let ata_program = &ctx.accounts.associated_token_program;
         let system_program = &ctx.accounts.system_program;
+        let dex_program = &ctx.accounts.dex_program;
         let rent_sysvar = &ctx.accounts.rent;
 
         fund.name = name;
@@ -69,21 +72,21 @@ pub mod akura {
                 &system_program.to_account_info(),
                 &rent_sysvar.to_account_info()
             )?;
+
+            // set up buying and selling for this asset on serum
+            let market = next_account_info(remaining_accounts_iter)?;
+            let open_orders = next_account_info(remaining_accounts_iter)?;
+
+            init_open_orders_account(
+                &open_orders.to_account_info(),
+                &fund.to_account_info(),
+                &market.to_account_info(),
+                &manager.to_account_info(),
+                &dex_program.to_account_info(),
+                rent_sysvar,
+                gen_fund_signer_seeds!(fund),
+            )?;
         }
-
-        let mngo_open_orders = next_account_info(remaining_accounts_iter)?;
-        let mngo_market = next_account_info(remaining_accounts_iter)?;
-        let dex_program = &ctx.accounts.dex_program;
-
-        init_open_orders_account(
-            &mngo_open_orders.to_account_info(),
-            &fund.to_account_info(),
-            &mngo_market.to_account_info(),
-            &manager.to_account_info(),
-            &dex_program.to_account_info(),
-            rent_sysvar,
-            &[&[b"akura fund", fund.manager.as_ref(), &[fund.fund_bump]]],
-        )?;
 
         Ok(())
 
@@ -100,10 +103,11 @@ pub mod akura {
         Ok(())
     }
 
-    pub fn buy_fund(
-        ctx: Context<BuyFund>,
+    pub fn buy_fund<'info>(
+        ctx: Context<'_, '_, '_, 'info, BuyFund<'info>>,
         amount: u64
     ) -> ProgramResult {
+        msg!("BUYING FUND");
         let fund: &mut Account<Fund> = &mut ctx.accounts.fund;
         let fund_usdc_ata = &ctx.accounts.fund_usdc_ata;
         let index_mint = &ctx.accounts.index_token_mint;
@@ -112,8 +116,12 @@ pub mod akura {
         let buyer_index_ata = &ctx.accounts.buyer_index_ata;
         let token_program = &ctx.accounts.token_program;
         let _system_program = &ctx.accounts.system_program;
+        let dex_program = &ctx.accounts.dex_program;
+        let rent_sysvar = &ctx.accounts.rent;
 
-        // TODO validate buyer_usdc_ata and buyer_index_ata
+        // TODO validate accounts
+
+        msg!("transferring spl");
 
         transfer_spl(
             &buyer.to_account_info(),
@@ -124,14 +132,41 @@ pub mod akura {
             &[]
         )?;
 
-        // TODO buy underlying tokens and put in fund atas
-        // let exr = serum_swap::ExchangeRate {
-        //     rate: 1,
-        //     from_decimals: 6,
-        //     quote_decimals: 6,
-        //     strict: false
-        // };
-        // serum_swap::cpi::swap(None, serum_swap::Side::Bid, amount, exr);
+        msg!("loading remaining accounts:");
+
+        let remaining_accounts_iter = &mut ctx.remaining_accounts.iter();
+        let market = next_account_info(remaining_accounts_iter)?;
+        let open_orders = next_account_info(remaining_accounts_iter)?;
+        let request_queue = next_account_info(remaining_accounts_iter)?;
+        let event_queue = next_account_info(remaining_accounts_iter)?;
+        let bids = next_account_info(remaining_accounts_iter)?;
+        let asks = next_account_info(remaining_accounts_iter)?;
+        let coin_vault = next_account_info(remaining_accounts_iter)?;
+        let pc_vault = next_account_info(remaining_accounts_iter)?;
+        let vault_signer = next_account_info(remaining_accounts_iter)?;
+        let coin_wallet = next_account_info(remaining_accounts_iter)?;
+
+        serum_buy(
+            amount,
+            &fund_usdc_ata.to_account_info(),
+            coin_wallet,
+            &fund.to_account_info(),
+            market,
+            open_orders,
+            request_queue,
+            event_queue,
+            bids,
+            asks,
+            coin_vault,
+            pc_vault,
+            vault_signer,
+            dex_program,
+            token_program,
+            rent_sysvar,
+            gen_fund_signer_seeds!(fund),
+        )?;
+
+        msg!("minting index tokens");
 
         mint_spl(
             &index_mint.to_account_info(),
@@ -139,7 +174,7 @@ pub mod akura {
             &buyer_index_ata.to_account_info(),
             amount,
             &token_program.to_account_info(),
-            &[&[b"akura fund mint", fund.manager.as_ref(), &[fund.mint_bump]]]
+            gen_fund_mint_signer_seeds!(fund),
         )?;
 
         fund.index_token_supply += amount;
@@ -166,7 +201,7 @@ pub mod akura {
             &seller_usdc_ata.to_account_info(),
             amount,
             &token_program.to_account_info(),
-            &[&[b"akura fund", fund.manager.as_ref(), &[fund.fund_bump]]]
+            gen_fund_signer_seeds!(fund),
         )?;
 
         burn_spl(
@@ -175,7 +210,7 @@ pub mod akura {
             &seller.to_account_info(),
             amount,
             &token_program.to_account_info(),
-            &[&[b"akura fund mint", fund.manager.as_ref(), &[fund.mint_bump]]]
+            gen_fund_mint_signer_seeds!(fund),
         )?;
 
         fund.index_token_supply -= amount;

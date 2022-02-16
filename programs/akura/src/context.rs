@@ -48,10 +48,8 @@ pub struct CreateFund<'info> {
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
+    pub dex_program: Program<'info, anchor_spl::dex::Dex>,
     pub rent: Sysvar<'info, Rent>,
-
-    pub dex_program: AccountInfo<'info>,
-    // pub dex_program: Program<'info, anchor_spl::dex::Dex>,
 }
 
 #[derive(Accounts)]
@@ -84,8 +82,8 @@ pub struct BuyFund<'info> {
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
+    pub dex_program: Program<'info, anchor_spl::dex::Dex>,
     pub rent: Sysvar<'info, Rent>
-    // remaining accounts: A/USDC market and fund's open orders account for each asset A
 }
 
 #[derive(Accounts)]
