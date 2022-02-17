@@ -21,3 +21,33 @@ pub struct Fund {
 
     pub fund_bump: u8,
 }
+
+#[account]
+#[derive(Default)]
+pub struct BuyData {
+    pub fund: Pubkey,
+    pub buyer: Pubkey,
+
+    pub amount: u64,
+    pub supply_snapshot: u64,
+
+    // asset that must be bought next
+    pub asset_index: u8, 
+
+    pub bump: u8,
+}
+
+#[account]
+#[derive(Default)]
+pub struct SellData {
+    pub fund: Pubkey,
+    pub seller: Pubkey,
+
+    pub amount: u64,
+    pub supply_snapshot: u64,
+
+    // asset that must be bought next
+    pub asset_index: u8, 
+
+    pub bump: u8,
+}

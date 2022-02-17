@@ -81,6 +81,32 @@ async function deriveMintAddress(
   return [mintAddress, bump];
 }
 
+async function deriveBuyDataAddress(
+  program,
+  fundAddress: web3.PublicKey,
+  buyer: web3.PublicKey,
+  fundName: string
+): Promise<[buyDataAddress: web3.PublicKey, bump: number]> {
+  const [buyDataAddress, bump] = await anchor.web3.PublicKey.findProgramAddress(
+    [Buffer.from("akura buy data"), fundAddress.toBytes(), buyer.toBytes()],
+    program.programId
+  )
+  return [buyDataAddress, bump];
+}
+
+async function deriveSellDataAddress(
+  program,
+  fundAddress: web3.PublicKey,
+  seller: web3.PublicKey,
+  fundName: string
+): Promise<[sellDataAddress: web3.PublicKey, bump: number]> {
+  const [sellDataAddress, bump] = await anchor.web3.PublicKey.findProgramAddress(
+    [Buffer.from("akura sell data"), fundAddress.toBytes(), seller.toBytes()],
+    program.programId
+  )
+  return [sellDataAddress, bump];
+}
+
 async function genRemainingCreateAccounts(
   fundAddress: web3.PublicKey,
   assets: [{mint: web3.PublicKey, market: any, vaultSigner: web3.PublicKey, openOrders: web3.PublicKey}]
@@ -98,40 +124,21 @@ async function genRemainingCreateAccounts(
 
 async function genRemainingBuyAccounts(
   fundAddress: web3.PublicKey,
-  assets: [{mint: web3.PublicKey, market: any, vaultSigner: web3.PublicKey, openOrders: web3.PublicKey}]
+  asset: {mint: web3.PublicKey, market: any, vaultSigner: web3.PublicKey, openOrders: web3.PublicKey}
 ): Promise<any> {
   let res = [];
-  for(let asset of assets){
-    let assetAta = await serumAta.getAssociatedTokenAddress(fundAddress, asset.mint);
-    res.push({pubkey: asset.market._decoded.ownAddress, isSigner: false, isWritable: true});
-    res.push({pubkey: asset.openOrders, isSigner: false, isWritable: true});
-    res.push({pubkey: asset.market._decoded.requestQueue, isSigner: false, isWritable: true});
-    res.push({pubkey: asset.market._decoded.eventQueue, isSigner: false, isWritable: true});
-    res.push({pubkey: asset.market._decoded.bids, isSigner: false, isWritable: true});
-    res.push({pubkey: asset.market._decoded.asks, isSigner: false, isWritable: true});
-    res.push({pubkey: asset.market._decoded.baseVault, isSigner: false, isWritable: true});
-    res.push({pubkey: asset.market._decoded.quoteVault, isSigner: false, isWritable: true});
-    res.push({pubkey: asset.vaultSigner, isSigner: false, isWritable: false});
-    res.push({pubkey: assetAta, isSigner: false, isWritable: true});
-  }
-  console.log(res);
-  // let remainingAccounts = [
-  //   {pubkey: MARKET_MNGO_USDC._decoded.ownAddress, isSigner: false, isWritable: true},
-  //   {pubkey: openOrdersMngo.publicKey, isSigner: false, isWritable: true},
-  //   {pubkey: MARKET_MNGO_USDC._decoded.requestQueue, isSigner: false, isWritable: true},
-  //   {pubkey: MARKET_MNGO_USDC._decoded.eventQueue, isSigner: false, isWritable: true},
-  //   {pubkey: MARKET_MNGO_USDC._decoded.bids, isSigner: false, isWritable: true},
-  //   {pubkey: MARKET_MNGO_USDC._decoded.asks, isSigner: false, isWritable: true},
-  //   // {pubkey: fundUsdcAta, isSigner: false, isWritable: true},
-  //   {pubkey: MARKET_MNGO_USDC._decoded.baseVault, isSigner: false, isWritable: true},
-  //   {pubkey: MARKET_MNGO_USDC._decoded.quoteVault, isSigner: false, isWritable: true},
-  //   {pubkey: marketMngoVaultSigner, isSigner: false, isWritable: false},
-  //   {pubkey: fundMngoAta, isSigner: false, isWritable: true},
-
-  //   // {pubkey: fundAddress, isSigner: false, isWritable: false},
-  //   // {pubkey: fundUsdcAta, isSigner: false, isWritable: true},
-  //   {pubkey: serumUtils.DEX_PID, isSigner: false, isWritable: false},
-  // ];
+  let assetAta = await serumAta.getAssociatedTokenAddress(fundAddress, asset.mint);
+  res.push({pubkey: asset.market._decoded.ownAddress, isSigner: false, isWritable: true});
+  res.push({pubkey: asset.openOrders, isSigner: false, isWritable: true});
+  res.push({pubkey: asset.market._decoded.requestQueue, isSigner: false, isWritable: true});
+  res.push({pubkey: asset.market._decoded.eventQueue, isSigner: false, isWritable: true});
+  res.push({pubkey: asset.market._decoded.bids, isSigner: false, isWritable: true});
+  res.push({pubkey: asset.market._decoded.asks, isSigner: false, isWritable: true});
+  res.push({pubkey: asset.market._decoded.baseVault, isSigner: false, isWritable: true});
+  res.push({pubkey: asset.market._decoded.quoteVault, isSigner: false, isWritable: true});
+  res.push({pubkey: asset.vaultSigner, isSigner: false, isWritable: false});
+  res.push({pubkey: assetAta, isSigner: false, isWritable: true});
+  return res;
 }
 
 module.exports = {
@@ -147,6 +154,8 @@ module.exports = {
   getTokenBalance,
   deriveFundAddress,
   deriveMintAddress,
+  deriveBuyDataAddress,
+  deriveSellDataAddress,
   genRemainingCreateAccounts,
   genRemainingBuyAccounts,
 };

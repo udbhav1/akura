@@ -6,7 +6,7 @@ use anchor_lang::solana_program::{
 };
 use std::mem::size_of;
 use std::num::NonZeroU64;
-use serum_dex::state::OpenOrders;
+use anchor_spl::dex::serum_dex::state::OpenOrders;
 use anchor_spl::token;
 use anchor_spl::dex;
 use anchor_spl::dex::serum_dex::state::MarketState;
@@ -270,8 +270,9 @@ pub fn init_open_orders_account<'info>(
 }
 
 #[inline(never)]
-pub fn serum_buy<'info>(
+pub fn serum_swap<'info>(
     amount: u64,
+    side: Side,
     usdc_wallet: &AccountInfo<'info>,
     base_wallet: &AccountInfo<'info>,
     authority: &AccountInfo<'info>,
@@ -284,53 +285,91 @@ pub fn serum_buy<'info>(
     coin_vault: &AccountInfo<'info>,
     pc_vault: &AccountInfo<'info>,
     vault_signer: &AccountInfo<'info>,
-    // coin_wallet: &AccountInfo<'info>,
     dex_program: &AccountInfo<'info>,
     token_program: &AccountInfo<'info>,
     rent_sysvar: &Sysvar<'info, Rent>,
     signer_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let mut exr = serum_swap::ExchangeRate {
-        rate: 0,
-        from_decimals: 6,
-        quote_decimals: 6,
-        strict: false
-    };
+    // let mut exr = serum_swap::ExchangeRate {
+    //     rate: 0,
+    //     from_decimals: 6,
+    //     quote_decimals: 6,
+    //     strict: false
+    // };
 
-    exr.quote_decimals = 0;
+    // exr.quote_decimals = 0;
     let referral = Option::<AccountInfo<'info>>::None;
 
-    let from_token = usdc_wallet;
-    let to_token = base_wallet;
+    let from_token;
+    let to_token;
+    if let Side::Bid = side {
+        from_token = usdc_wallet;
+        to_token = base_wallet;
+    } else {
+        from_token = base_wallet;
+        to_token = usdc_wallet;
+    }
 
-    let from_amount_before = token::accessor::amount(from_token)?;
-    let to_amount_before = token::accessor::amount(to_token)?;
+    let _from_amount_before = token::accessor::amount(from_token)?;
+    let _to_amount_before = token::accessor::amount(to_token)?;
 
-    let market_accounts = MarketAccounts {
-        market: market.to_account_info(),
-        open_orders: open_orders.to_account_info(),
-        request_queue: request_queue.to_account_info(),
-        event_queue: event_queue.to_account_info(),
-        bids: bids.to_account_info(),
-        asks: asks.to_account_info(),
-        order_payer_token_account: usdc_wallet.to_account_info(),
-        coin_vault: coin_vault.to_account_info(),
-        pc_vault: pc_vault.to_account_info(),
-        vault_signer: vault_signer.to_account_info(),
-        coin_wallet: base_wallet.to_account_info(),
-    };
+    let market_accounts: MarketAccounts;
+    let orderbook: OrderbookClient;
 
-    let orderbook = OrderbookClient {
-        market: market_accounts,
-        authority: authority.to_account_info(),
-        pc_wallet: usdc_wallet.to_account_info(),
-        dex_program: dex_program.to_account_info(),
-        token_program: token_program.to_account_info(),
-        rent: rent_sysvar.to_account_info()
-    };
+    if let Side::Bid = side {
+        market_accounts = MarketAccounts {
+            market: market.to_account_info(),
+            open_orders: open_orders.to_account_info(),
+            request_queue: request_queue.to_account_info(),
+            event_queue: event_queue.to_account_info(),
+            bids: bids.to_account_info(),
+            asks: asks.to_account_info(),
+            order_payer_token_account: usdc_wallet.to_account_info(),
+            coin_vault: coin_vault.to_account_info(),
+            pc_vault: pc_vault.to_account_info(),
+            vault_signer: vault_signer.to_account_info(),
+            coin_wallet: base_wallet.to_account_info(),
+        };
 
-    msg!("buying tokens");
-    orderbook.buy(amount, None, signer_seeds)?;
+        orderbook = OrderbookClient {
+            market: market_accounts,
+            authority: authority.to_account_info(),
+            pc_wallet: usdc_wallet.to_account_info(),
+            dex_program: dex_program.to_account_info(),
+            token_program: token_program.to_account_info(),
+            rent: rent_sysvar.to_account_info()
+        };
+
+        msg!("buying tokens");
+        orderbook.buy(amount, None, signer_seeds)?;
+    } else {
+        market_accounts = MarketAccounts {
+            market: market.to_account_info(),
+            open_orders: open_orders.to_account_info(),
+            request_queue: request_queue.to_account_info(),
+            event_queue: event_queue.to_account_info(),
+            bids: bids.to_account_info(),
+            asks: asks.to_account_info(),
+            order_payer_token_account: base_wallet.to_account_info(),
+            coin_vault: coin_vault.to_account_info(),
+            pc_vault: pc_vault.to_account_info(),
+            vault_signer: vault_signer.to_account_info(),
+            coin_wallet: base_wallet.to_account_info(),
+        };
+
+        orderbook = OrderbookClient {
+            market: market_accounts,
+            authority: authority.to_account_info(),
+            pc_wallet: usdc_wallet.to_account_info(),
+            dex_program: dex_program.to_account_info(),
+            token_program: token_program.to_account_info(),
+            rent: rent_sysvar.to_account_info()
+        };
+
+        msg!("selling tokens");
+        orderbook.sell(amount, None, signer_seeds)?;
+    }
+
     msg!("settling order");
     orderbook.settle(referral, signer_seeds)?;
 
@@ -413,6 +452,7 @@ impl<'info> OrderbookClient<'info> {
     //
     // `base_amount` is the "native" amount of the base currency, i.e., token
     // amount including decimals.
+    #[inline(never)]
     fn sell(
         &self,
         base_amount: u64,
@@ -503,6 +543,7 @@ impl<'info> OrderbookClient<'info> {
         )
     }
 
+    #[inline(never)]
     fn settle(
         &self,
         referral: Option<AccountInfo<'info>>,

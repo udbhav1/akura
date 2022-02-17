@@ -18,7 +18,3 @@ devnet-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/devnet.ts"
 [[test.genesis]]
 address = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
 program = "./deps/serum-dex/dex/target/deploy/serum_dex.so"
-
-[[test.genesis]]
-address = "22Y43yTVxuUkoRKdm9thyRhQ3SdgQS7c7kB6UNCiaczD"
-program = "./deps/swap/target/deploy/serum_swap.so"

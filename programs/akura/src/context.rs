@@ -14,7 +14,6 @@ use crate::account::*;
 pub struct CreateFund<'info> {
     #[account(
         init,
-        // seeds = [b"akura fund", manager.to_account_info().key.as_ref(), String::from_utf8(name.to_vec()).unwrap().as_bytes()],
         seeds = [b"akura fund", manager.to_account_info().key.as_ref()],
         bump,
         payer = manager
@@ -61,6 +60,26 @@ pub struct SetManager<'info> {
 }
 
 #[derive(Accounts)]
+pub struct InitBuyData<'info> {
+    pub fund: Account<'info, Fund>,
+    #[account(
+        init,
+        seeds = [
+            b"akura buy data",
+            fund.to_account_info().key.as_ref(),
+            buyer.to_account_info().key.as_ref()
+        ],
+        bump,
+        payer = buyer,
+    )]
+    pub buy_data: Account<'info, BuyData>,
+    #[account(mut)]
+    pub buyer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+
+#[derive(Accounts)]
 pub struct BuyFund<'info> {
     #[account(mut)]
     pub fund: Box<Account<'info, Fund>>,
@@ -79,11 +98,32 @@ pub struct BuyFund<'info> {
         associated_token::authority = buyer
     )]
     pub buyer_index_ata: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
+    pub buy_data: Box<Account<'info, BuyData>>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub dex_program: Program<'info, anchor_spl::dex::Dex>,
     pub rent: Sysvar<'info, Rent>
+}
+
+#[derive(Accounts)]
+pub struct InitSellData<'info> {
+    pub fund: Account<'info, Fund>,
+    #[account(
+        init,
+        seeds = [
+            b"akura sell data",
+            fund.to_account_info().key.as_ref(),
+            seller.to_account_info().key.as_ref()
+        ],
+        bump,
+        payer = seller,
+    )]
+    pub sell_data: Account<'info, SellData>,
+    #[account(mut)]
+    pub seller: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -100,6 +140,11 @@ pub struct SellFund<'info> {
     pub seller_usdc_ata: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
     pub seller_index_ata: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
+    pub sell_data: Box<Account<'info, SellData>>,
     pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
+    pub dex_program: Program<'info, anchor_spl::dex::Dex>,
+    pub rent: Sysvar<'info, Rent>
 }
