@@ -14,7 +14,7 @@ use crate::account::*;
 pub struct CreateFund<'info> {
     #[account(
         init,
-        seeds = [b"akura fund", manager.to_account_info().key.as_ref()],
+        seeds = [b"akura fund", manager.to_account_info().key.as_ref(), &name],
         bump,
         payer = manager
     )]
@@ -30,7 +30,7 @@ pub struct CreateFund<'info> {
 
     #[account(
         init,
-        seeds = [b"akura fund mint", manager.to_account_info().key.as_ref()],
+        seeds = [b"akura fund mint", manager.to_account_info().key.as_ref(), &name],
         bump,
         payer = manager,
         mint::decimals = token_decimals,

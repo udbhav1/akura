@@ -15,6 +15,7 @@ macro_rules! gen_fund_signer_seeds{
         &[&[
             b"akura fund",
             $fund.manager.as_ref(),
+            &$fund.name,
             &[$fund.fund_bump],
         ]]
     }
@@ -26,6 +27,7 @@ macro_rules! gen_fund_mint_signer_seeds{
         &[&[
             b"akura fund mint",
             $fund.manager.as_ref(),
+            &$fund.name,
             &[$fund.mint_bump],
         ]]
     }

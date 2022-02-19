@@ -3,6 +3,7 @@ import { Program } from '@project-serum/anchor';
 import * as splToken from '@solana/spl-token';
 import * as serumAta from '@project-serum/associated-token'
 import * as web3 from '@solana/web3.js';
+import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 
 function lamports(sol: number): number {
   return sol*anchor.web3.LAMPORTS_PER_SOL;
@@ -14,6 +15,14 @@ function sol(lamports: number): number {
 
 function usdc(dollars: number): number {
   return dollars*(10**6);
+}
+
+function pad(arr: number[], len: number): number[] {
+  let l = arr.length
+  for(var i = 0; i < (len - l); i++){
+    arr.push(0);
+  }
+  return arr;
 }
 
 function strToU8(str: String): number[] {
@@ -61,9 +70,9 @@ async function deriveFundAddress(
   managerAddress: web3.PublicKey,
   fundName: string
 ): Promise<[fundAddress: web3.PublicKey, bump: number]> {
-  let name = Buffer.from(fundName);
+  let name = pad(strToU8(fundName), 30);
   const [fundAddress, bump] = await anchor.web3.PublicKey.findProgramAddress(
-    [Buffer.from("akura fund"), managerAddress.toBytes()],
+    [Buffer.from("akura fund"), managerAddress.toBytes(), Buffer.from(name)],
     program.programId
   )
   return [fundAddress, bump];
@@ -74,8 +83,9 @@ async function deriveMintAddress(
   managerAddress: web3.PublicKey,
   fundName: string
 ): Promise<[mintAddress: web3.PublicKey, bump: number]> {
+  let name = pad(strToU8(fundName), 30);
   const [mintAddress, bump] = await anchor.web3.PublicKey.findProgramAddress(
-    [Buffer.from("akura fund mint"), managerAddress.toBytes()],
+    [Buffer.from("akura fund mint"), managerAddress.toBytes(), Buffer.from(name)],
     program.programId
   )
   return [mintAddress, bump];
@@ -145,6 +155,7 @@ module.exports = {
   lamports,
   sol,
   usdc,
+  pad,
   strToU8,
   u8ToStr,
   randomInt,
