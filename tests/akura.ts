@@ -63,16 +63,16 @@ describe('akura', () => {
   };
 
   let mngoAsks = [
-    [2.00, 10],
-    [2.01, 10],
-    [2.03, 10],
-    [2.05, 10],
+    [2.00, 20],
+    [2.01, 20],
+    [2.03, 20],
+    [2.05, 20],
   ];
   let mngoBids = [
-    [1.97, 10],
-    [1.95, 10],
-    [1.93, 10],
-    [1.90, 10],
+    [1.97, 20],
+    [1.95, 20],
+    [1.93, 20],
+    [1.90, 20],
   ];
 
   let rayAsks = [
@@ -420,6 +420,89 @@ describe('akura', () => {
 
     temp = await utils.getTokenBalance(program, buyerFundAta);
     console.log("post sell index tokens: ", temp.uiAmount);
+  });
+
+  it('init buy data pda again', async () => {
+
+    buyAmount = utils.usdc(200);
+    console.log("amount to buy: ", buyAmount);
+
+    [buyDataAddress, buyDataBump] = await utils.deriveBuyDataAddress(
+      program,
+      fundAddress,
+      buyer.publicKey,
+    );
+
+    await program.rpc.initBuyData(new anchor.BN(buyAmount), {
+      accounts: {
+        fund: fundAddress,
+        buyData: buyDataAddress,
+        buyer: buyer.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      },
+      signers: [buyer]
+    });
+
+  });
+
+  it('buy fund again', async () => {
+
+    temp = await utils.getTokenBalance(program, buyerUsdcAta.address);
+    console.log("pre buy buyer usdc: ", temp.uiAmount);
+
+    temp = await utils.getTokenBalance(program, fundUsdcAta);
+    console.log("pre buy fund usdc: ", temp.uiAmount);
+
+    temp = await utils.getTokenBalance(program, fundMngoAta);
+    console.log("pre buy fund mngo: ", temp.uiAmount);
+
+    temp = await utils.getTokenBalance(program, fundRayAta);
+    console.log("pre buy fund ray: ", temp.uiAmount);
+
+    for(let asset of assets){
+      let remainingAccounts = await utils.genRemainingBuyAccounts(fundAddress, asset);
+
+      await program.rpc.buyFund({
+          accounts: {
+            fund: fundAddress,
+            fundUsdcAta: fundUsdcAta,
+            indexTokenMint: fundTokenMint,
+            buyer: buyer.publicKey,
+            buyerUsdcAta: buyerUsdcAta.address,
+            buyerIndexAta: buyerFundAta,
+            buyData: buyDataAddress,
+            tokenProgram: splToken.TOKEN_PROGRAM_ID,
+            associatedTokenProgram: serumAta.ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: anchor.web3.SystemProgram.programId,
+            dexProgram: serumUtils.DEX_PID,
+            rent: web3.SYSVAR_RENT_PUBKEY,
+          },
+          signers: [buyer],
+          remainingAccounts,
+      });
+      console.log("bought an asset");
+    }
+
+    temp = await utils.getTokenBalance(program, buyerUsdcAta.address);
+    console.log("post buy buyer usdc: ", temp.uiAmount);
+
+    temp = await utils.getTokenBalance(program, fundUsdcAta);
+    console.log("post buy fund usdc: ", temp.uiAmount);
+
+    temp = await utils.getTokenBalance(program, fundMngoAta);
+    console.log("post buy fund mngo: ", temp.uiAmount);
+
+    temp = await utils.getTokenBalance(program, fundRayAta);
+    console.log("post buy fund ray: ", temp.uiAmount);
+
+    temp = await utils.getTokenBalance(program, buyerUsdcAta.address);
+    // small margin of error
+    // assert.ok(Math.abs((usdcAmount - amountToSpend) - temp.amount) < 100);
+
+    temp = await utils.getTokenBalance(program, buyerFundAta);
+    console.log("post buy index tokens: ", temp.uiAmount);
+
+    assert.ok(temp.amount > 0);
   });
 
   it('fetch fund', async () => {

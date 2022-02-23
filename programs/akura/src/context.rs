@@ -63,7 +63,7 @@ pub struct SetManager<'info> {
 pub struct InitBuyData<'info> {
     pub fund: Account<'info, Fund>,
     #[account(
-        init,
+        init_if_needed,
         seeds = [
             b"akura buy data",
             fund.to_account_info().key.as_ref(),
@@ -77,7 +77,6 @@ pub struct InitBuyData<'info> {
     pub buyer: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
-
 
 #[derive(Accounts)]
 pub struct BuyFund<'info> {
@@ -111,7 +110,7 @@ pub struct BuyFund<'info> {
 pub struct InitSellData<'info> {
     pub fund: Account<'info, Fund>,
     #[account(
-        init,
+        init_if_needed,
         seeds = [
             b"akura sell data",
             fund.to_account_info().key.as_ref(),

@@ -137,6 +137,7 @@ pub mod akura {
         let dex_program = &ctx.accounts.dex_program;
         let rent_sysvar = &ctx.accounts.rent;
 
+        // TODO require buy data has been init'ed properly
         // TODO validate accounts
 
         let total_weight: u64 = fund.weights.iter().sum();
@@ -201,6 +202,10 @@ pub mod akura {
 
             fund.index_token_supply += buy_data.amount;
 
+            // reset buy data
+            buy_data.amount = 0;
+            buy_data.supply_snapshot = 0;
+            buy_data.asset_index = 0;
         }
 
         // maybe shouldnt refund bc this lets buyers get 100 index tokens for "trying" to buy 100 usdc worth of underlying, even if slippage/fees means they only bought 99.5 usdc of the underlying
@@ -339,9 +344,12 @@ pub mod akura {
 
         // msg!("transferred usdc");
 
-        // if sell_data.asset_index == fund.num_assets {
-            
-        // }
+        if sell_data.asset_index == fund.num_assets {
+            // reset sell data
+            sell_data.amount = 0;
+            sell_data.supply_snapshot = 0;
+            sell_data.asset_index = 0;
+        }
 
         Ok(())
     }
