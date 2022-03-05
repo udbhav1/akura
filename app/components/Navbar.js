@@ -3,6 +3,8 @@ import { useRouter } from "next/router";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
+import logo from "../public/logo.svg"
+
 const Navbar = () => {
   const { wallet } = useWallet();
   const location = useRouter().asPath;
@@ -11,7 +13,8 @@ const Navbar = () => {
     <nav className="navbar">
         <Link href="/">
             <div className="navbarLogo">
-                <h1>AKURA</h1>
+                {/* <h1>AKURA</h1> */}
+                <img src="/logo.svg"/>
             </div>
         </Link>
 
