@@ -115,6 +115,7 @@ pub mod akura {
         buy_data.buyer = *buyer.key;
         buy_data.amount = amount;
         buy_data.supply_snapshot = fund.index_token_supply;
+        buy_data.usdc_refunded = 0;
         buy_data.asset_index = 0;
 
         buy_data.bump = *ctx.bumps.get("buy_data").unwrap();
@@ -140,8 +141,11 @@ pub mod akura {
         // TODO require buy data has been init'ed properly
         // TODO validate accounts
 
+        // TODO safemath
         let total_weight: u64 = fund.weights.iter().sum();
         let amount = (fund.weights[buy_data.asset_index as usize]*buy_data.amount)/total_weight;
+
+        let old_usdc_amount = token::accessor::amount(&fund_usdc_ata.to_account_info())?;
 
         transfer_spl(
             &buyer.to_account_info(),
@@ -187,34 +191,14 @@ pub mod akura {
 
         buy_data.asset_index += 1;
 
-        if buy_data.asset_index == fund.num_assets {
+        // refund any usdc left unspent bc of slippage on the swap and record for later
+        let new_usdc_amount = token::accessor::amount(&fund_usdc_ata.to_account_info())?;
 
-            msg!("minting index tokens");
+        let refund_amount = new_usdc_amount - old_usdc_amount;
+        buy_data.usdc_refunded += refund_amount;
 
-            mint_spl(
-                &index_mint.to_account_info(),
-                &index_mint.to_account_info(),
-                &buyer_index_ata.to_account_info(),
-                buy_data.amount,
-                &token_program.to_account_info(),
-                gen_fund_mint_signer_seeds!(fund),
-            )?;
+        msg!("refunding {} usdc", refund_amount);
 
-            fund.index_token_supply += buy_data.amount;
-
-            // reset buy data
-            buy_data.amount = 0;
-            buy_data.supply_snapshot = 0;
-            buy_data.asset_index = 0;
-        }
-
-        // maybe shouldnt refund bc this lets buyers get 100 index tokens for "trying" to buy 100 usdc worth of underlying, even if slippage/fees means they only bought 99.5 usdc of the underlying
-        // redeem this usdc just as part of the fund when selling?
-        // but when swapping back to usdc itll get mixed up in the unrefunded slippage usdc
-
-        msg!("refunding");
-        // refund any usdc left unspent bc of slippage or fees
-        let refund_amount = token::accessor::amount(&fund_usdc_ata.to_account_info())?;
         transfer_spl(
             &fund.to_account_info(),
             &fund_usdc_ata.to_account_info(),
@@ -223,6 +207,30 @@ pub mod akura {
             &token_program.to_account_info(),
             gen_fund_signer_seeds!(fund),
         )?;
+
+        if buy_data.asset_index == fund.num_assets {
+
+            let mint_amount = buy_data.amount - buy_data.usdc_refunded;
+
+            msg!("minting {} index tokens", mint_amount);
+
+            mint_spl(
+                &index_mint.to_account_info(),
+                &index_mint.to_account_info(),
+                &buyer_index_ata.to_account_info(),
+                mint_amount,
+                &token_program.to_account_info(),
+                gen_fund_mint_signer_seeds!(fund),
+            )?;
+
+            fund.index_token_supply += mint_amount;
+
+            // reset buy data
+            buy_data.amount = 0;
+            buy_data.supply_snapshot = 0;
+            buy_data.usdc_refunded = 0;
+            buy_data.asset_index = 0;
+        }
 
         Ok(())
     }
@@ -291,7 +299,10 @@ pub mod akura {
 
         let reserve = token::accessor::amount(&coin_wallet.to_account_info())?;
         let amount = (reserve*sell_data.amount)/sell_data.supply_snapshot;
-        // msg!("amount to swap: {}", amount);
+        // msg!("reserve: {}", reserve);
+        // msg!("amount to sell: {}", sell_data.amount);
+        // msg!("snapshot: {}", sell_data.supply_snapshot);
+        msg!("amount to swap: {}", amount);
 
         let old_usdc_amount = token::accessor::amount(&fund_usdc_ata.to_account_info())?;
 

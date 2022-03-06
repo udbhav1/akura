@@ -30,9 +30,11 @@ pub struct BuyData {
 
     pub amount: u64,
     pub supply_snapshot: u64,
+    // total usdc refunded across swaps bc of slippage
+    pub usdc_refunded: u64,
 
     // asset that must be bought next
-    pub asset_index: u8, 
+    pub asset_index: u8,
 
     pub bump: u8,
 }

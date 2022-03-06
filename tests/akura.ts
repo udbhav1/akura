@@ -347,7 +347,8 @@ describe('akura', () => {
 
   it('init sell data pda', async () => {
 
-    sellAmount = buyAmount;
+    let heldFundTokens = await utils.getTokenBalance(program, buyerFundAta);
+    sellAmount = heldFundTokens.amount;
     console.log("amount to sell: ", sellAmount);
 
     [sellDataAddress, sellDataBump] = await utils.deriveSellDataAddress(
