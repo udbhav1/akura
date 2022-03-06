@@ -261,11 +261,6 @@ pub mod akura {
         let dex_program = &ctx.accounts.dex_program;
         let rent_sysvar = &ctx.accounts.rent;
 
-        msg!("asset index: {}", sell_data.asset_index);
-        msg!("burn amount: {}", sell_data.amount);
-        let held = token::accessor::amount(&seller_index_ata.to_account_info())?;
-        msg!("held amount: {}", held);
-
         if sell_data.asset_index == 0 {
 
             msg!("burning index tokens");
@@ -298,6 +293,8 @@ pub mod akura {
         let amount = (reserve*sell_data.amount)/sell_data.supply_snapshot;
         // msg!("amount to swap: {}", amount);
 
+        let old_usdc_amount = token::accessor::amount(&fund_usdc_ata.to_account_info())?;
+
         serum_swap(
             amount,
             Side::Ask,
@@ -319,19 +316,10 @@ pub mod akura {
             gen_fund_signer_seeds!(fund),
         )?;
 
-        // msg!("incrementing index");
-        // msg!("pre index: {}", sell_data.asset_index);
-
         sell_data.asset_index += 1;
 
-        // msg!("post index: {}", sell_data.asset_index);
-
-        let liquidated_amount = token::accessor::amount(&fund_usdc_ata.to_account_info())?;
-        let new_reserve = token::accessor::amount(&coin_wallet.to_account_info())?;
-        // msg!("amount before swap: {}", reserve);
-        // msg!("amount after swap: {}", new_reserve);
-
-        // msg!("amount liquidated: {}", liquidated_amount);
+        let new_usdc_amount = token::accessor::amount(&fund_usdc_ata.to_account_info())?;
+        let liquidated_amount = new_usdc_amount - old_usdc_amount;
 
         transfer_spl(
             &fund.to_account_info(),
@@ -341,8 +329,6 @@ pub mod akura {
             &token_program.to_account_info(),
             gen_fund_signer_seeds!(fund),
         )?;
-
-        // msg!("transferred usdc");
 
         if sell_data.asset_index == fund.num_assets {
             // reset sell data
