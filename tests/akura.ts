@@ -8,10 +8,7 @@ import * as web3 from '@solana/web3.js';
 import * as assert from "assert";
 const utils = require("./utils");
 const serumUtils = require("./serumUtils");
-
-// TODO move to utils
-const SWAP_PID = new anchor.web3.PublicKey("22Y43yTVxuUkoRKdm9thyRhQ3SdgQS7c7kB6UNCiaczD");
-const TAKER_FEE = 0.0022;
+var fs = require('fs');
 
 anchor.setProvider(anchor.Provider.env());
 
@@ -90,6 +87,183 @@ describe('akura', () => {
 
   let openOrdersMngo = anchor.web3.Keypair.generate();
   let openOrdersRay = anchor.web3.Keypair.generate();
+
+  it.only('set up local accounts', async () => {
+  
+    let user = new web3.PublicKey("9xvL3NhQCsWxKd8ba1qLYQPbwdmHaA8cgRZgUi5WqCmi");
+
+    console.log("serum boilerplate");
+    let marketMaker = anchor.web3.Keypair.generate();
+
+    await utils.airdrop(program, manager.publicKey, utils.lamports(5));
+    await utils.airdrop(program, mintOwner.publicKey, utils.lamports(5));
+    await utils.airdrop(program, marketMaker.publicKey, utils.lamports(5));
+
+    USDC_MINT = await splToken.Token.createMint(
+      program.provider.connection,
+      mintOwner,
+      mintOwner.publicKey,
+      null,
+      6,
+      splToken.TOKEN_PROGRAM_ID
+    );
+    MNGO_MINT = await splToken.Token.createMint(
+      program.provider.connection,
+      mintOwner,
+      mintOwner.publicKey,
+      null,
+      6,
+      splToken.TOKEN_PROGRAM_ID
+    );
+    RAY_MINT = await splToken.Token.createMint(
+      program.provider.connection,
+      mintOwner,
+      mintOwner.publicKey,
+      null,
+      6,
+      splToken.TOKEN_PROGRAM_ID
+    );
+
+    let marketMakerUsdc = await USDC_MINT.getOrCreateAssociatedAccountInfo(marketMaker.publicKey);
+    await USDC_MINT.mintTo(marketMakerUsdc.address, mintOwner.publicKey, [], utils.usdc(10000));
+
+    let marketMakerMngo = await MNGO_MINT.getOrCreateAssociatedAccountInfo(marketMaker.publicKey);
+    await MNGO_MINT.mintTo(marketMakerMngo.address, mintOwner.publicKey, [], utils.usdc(10000));
+
+    let marketMakerRay = await RAY_MINT.getOrCreateAssociatedAccountInfo(marketMaker.publicKey);
+    await RAY_MINT.mintTo(marketMakerRay.address, mintOwner.publicKey, [], utils.usdc(10000));
+
+    MARKET_MAKER = {
+      account: marketMaker,
+      usdc: marketMakerUsdc,
+      mngo: marketMakerMngo,
+      ray: marketMakerRay
+    };
+
+    MARKET_MNGO_USDC = await serumUtils.setupMarket({
+      provider: program.provider,
+      baseMint: MNGO_MINT.publicKey,
+      quoteMint: USDC_MINT.publicKey,
+      marketMaker: {
+        account: MARKET_MAKER.account,
+        baseToken: MARKET_MAKER.mngo.address,
+        quoteToken: MARKET_MAKER.usdc.address,
+      },
+      bids: mngoBids,
+      asks: mngoAsks,
+    });
+
+    MARKET_RAY_USDC = await serumUtils.setupMarket({
+      provider: program.provider,
+      baseMint: RAY_MINT.publicKey,
+      quoteMint: USDC_MINT.publicKey,
+      marketMaker: {
+        account: MARKET_MAKER.account,
+        baseToken: MARKET_MAKER.ray.address,
+        quoteToken: MARKET_MAKER.usdc.address,
+      },
+      bids: rayBids,
+      asks: rayAsks,
+    });
+
+    const [vaultSignerA] = await serumUtils.getVaultOwnerAndNonce(
+      MARKET_MNGO_USDC._decoded.ownAddress
+    );
+    const [vaultSignerB] = await serumUtils.getVaultOwnerAndNonce(
+      MARKET_RAY_USDC._decoded.ownAddress
+    );
+    marketMngoVaultSigner = vaultSignerA;
+    marketRayVaultSigner = vaultSignerB;
+
+    // CREATE FUND
+    console.log("creating fund");
+
+    let fundName = "defi index";
+    let fundSymbol = "DEFI";
+    let num_assets = 2;
+    assets = [
+      {
+        mint: MNGO_MINT.publicKey,
+        market: MARKET_MNGO_USDC,
+        vaultSigner: marketMngoVaultSigner,
+        openOrders: openOrdersMngo.publicKey
+      },
+      {
+        mint: RAY_MINT.publicKey,
+        market: MARKET_RAY_USDC,
+        vaultSigner: marketRayVaultSigner,
+        openOrders: openOrdersRay.publicKey
+      }
+    ];
+    let weights = [new anchor.BN(1), new anchor.BN(1)];
+    let fundTokenDecimals = 6;
+    [fundAddress, fundBump] = await utils.deriveFundAddress(
+      program,
+      manager.publicKey,
+      fundName
+    );
+    fundUsdcAta = await serumAta.getAssociatedTokenAddress(fundAddress, USDC_MINT.publicKey);
+    fundMngoAta = await serumAta.getAssociatedTokenAddress(fundAddress, MNGO_MINT.publicKey);
+    fundRayAta = await serumAta.getAssociatedTokenAddress(fundAddress, RAY_MINT.publicKey);
+    [fundTokenMint, mintBump] = await utils.deriveMintAddress(
+      program,
+      manager.publicKey,
+      fundName
+    );
+
+    // mints, atas, markets, and open orders accs for underlying tokens
+    let remainingAccounts = await utils.genRemainingCreateAccounts(fundAddress, assets);
+
+    await program.rpc.createFund(utils.strToU8(fundName) as any,
+                                 utils.strToU8(fundSymbol) as any,
+                                 new anchor.BN(num_assets),
+                                 weights,
+                                //  new anchor.BN(fundBump),
+                                //  new anchor.BN(mintBump),
+                                 new anchor.BN(fundTokenDecimals), {
+        accounts: {
+          fund: fundAddress,
+          fundUsdcAta: fundUsdcAta,
+          manager: manager.publicKey,
+          indexTokenMint: fundTokenMint,
+          usdcMint: USDC_MINT.publicKey,
+          tokenProgram: splToken.TOKEN_PROGRAM_ID,
+          associatedTokenProgram: serumAta.ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+          dexProgram: serumUtils.DEX_PID,
+          rent: web3.SYSVAR_RENT_PUBKEY,
+        },
+        signers: [openOrdersMngo, openOrdersRay, manager],
+        remainingAccounts,
+    });
+
+    // make sure open orders account is now stored in the market account
+    let oo = await MARKET_MNGO_USDC.findOpenOrdersAccountsForOwner(program.provider.connection, fundAddress);
+    assert.equal(oo[0].address.toBase58(), openOrdersMngo.publicKey.toBase58());
+    oo = await MARKET_RAY_USDC.findOpenOrdersAccountsForOwner(program.provider.connection, fundAddress);
+    assert.equal(oo[0].address.toBase58(), openOrdersRay.publicKey.toBase58());
+
+    // FUND USER
+    let userUsdcAta = await USDC_MINT.getOrCreateAssociatedAccountInfo(user);
+    let usdcAirdropAmount = utils.usdc(500);
+    console.log(userUsdcAta.address.toBase58());
+    await USDC_MINT.mintTo(userUsdcAta.address, mintOwner.publicKey, [], usdcAirdropAmount);
+
+    // WRITE TO JSON
+    // TODO add all relevant accounts for *everything* and only store readable pubkeys/keypairs
+    let json = {
+        marketMaker: MARKET_MAKER,
+        mintOwner: mintOwner,
+        USDC_MINT: USDC_MINT.publicKey,
+        MNGO_MINT: MNGO_MINT.publicKey,
+        RAY_MINT: RAY_MINT.publicKey,
+        MARKET_MNGO_USDC: MARKET_MNGO_USDC,
+        MARKET_RAY_USDC: MARKET_RAY_USDC,
+    }
+    // console.log(JSON.stringify(json));
+    fs.writeFileSync('./app/serumData.json', JSON.stringify(json));
+
+  });
 
   it('BOILERPLATE: set up mints, markets, and orderbook', async () => {
 

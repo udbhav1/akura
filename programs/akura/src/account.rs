@@ -5,6 +5,12 @@ pub const MAX_ASSETS: usize = 5;
 
 #[account]
 #[derive(Default)]
+pub struct Acc {
+    pub stored: u64
+}
+
+#[account]
+#[derive(Default)]
 pub struct Fund {
     pub name: [u8; 30],
     pub symbol: [u8; 4],

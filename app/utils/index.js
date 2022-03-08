@@ -4,19 +4,19 @@ import * as splToken from '@solana/spl-token';
 import * as serumAta from '@project-serum/associated-token'
 import * as web3 from '@solana/web3.js';
 
-function lamports(sol: number): number {
+function lamports(sol) {
   return sol*anchor.web3.LAMPORTS_PER_SOL;
 }
 
-function sol(lamports: number): number {
+function sol(lamports) {
   return lamports/anchor.web3.LAMPORTS_PER_SOL;
 }
 
-function usdc(dollars: number): number {
+function usdc(dollars) {
   return dollars*(10**6);
 }
 
-function pad(arr: number[], len: number): number[] {
+function pad(arr, len) {
   let l = arr.length
   for(var i = 0; i < (len - l); i++){
     arr.push(0);
@@ -24,51 +24,46 @@ function pad(arr: number[], len: number): number[] {
   return arr;
 }
 
-function strToU8(str: String): number[] {
+function strToU8(str) {
   return Array.from(Uint8Array.from(str, x => x.charCodeAt(0)));
 }
 
-function u8ToStr(arr: number[]): String {
+function u8ToStr(arr) {
   return String.fromCharCode(...arr);
 }
 
-function randomInt(min: number, max: number): number {
+function randomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min) + min);
 }
 
-function delay(interval: number, message: string): Mocha.Test {
+function delay(interval, message) {
    return it(message, done => {
       setTimeout(() => done(), interval)
    }).timeout(interval + 100)
 }
 
-async function airdrop(program, address: web3.PublicKey, lamports: number){
+async function airdrop(program, address, lamports) {
   const air = await program.provider.connection.requestAirdrop(address, lamports);
   await program.provider.connection.confirmTransaction(air);
 }
 
-async function getLamportBalance(program, address: web3.PublicKey): Promise<number> {
+async function getLamportBalance(program, address) {
   let amt = await program.provider.connection.getBalance(address);
   return amt;
 }
 
-async function getTokenBalance(program, tokenAccountAddress: web3.PublicKey): Promise<{
-  amount: string,
-  decimals: number,
-  uiAmount: number,
-  uiAmountString: number
-}> {
+async function getTokenBalance(program, tokenAccountAddress) {
   let res = await program.provider.connection.getTokenAccountBalance(tokenAccountAddress);
   return res.value;
 }
 
 async function deriveFundAddress(
   program,
-  managerAddress: web3.PublicKey,
-  fundName: string
-): Promise<[fundAddress: web3.PublicKey, bump: number]> {
+  managerAddress,
+  fundName,
+) {
   let name = pad(strToU8(fundName), 30);
   const [fundAddress, bump] = await anchor.web3.PublicKey.findProgramAddress(
     [Buffer.from("akura fund"), managerAddress.toBytes(), Buffer.from(name)],
@@ -79,9 +74,9 @@ async function deriveFundAddress(
 
 async function deriveMintAddress(
   program,
-  managerAddress: web3.PublicKey,
-  fundName: string
-): Promise<[mintAddress: web3.PublicKey, bump: number]> {
+  managerAddress,
+  fundName
+) {
   let name = pad(strToU8(fundName), 30);
   const [mintAddress, bump] = await anchor.web3.PublicKey.findProgramAddress(
     [Buffer.from("akura fund mint"), managerAddress.toBytes(), Buffer.from(name)],
@@ -92,10 +87,10 @@ async function deriveMintAddress(
 
 async function deriveBuyDataAddress(
   program,
-  fundAddress: web3.PublicKey,
-  buyer: web3.PublicKey,
-  fundName: string
-): Promise<[buyDataAddress: web3.PublicKey, bump: number]> {
+  fundAddress,
+  buyer,
+  fundName
+) {
   const [buyDataAddress, bump] = await anchor.web3.PublicKey.findProgramAddress(
     [Buffer.from("akura buy data"), fundAddress.toBytes(), buyer.toBytes()],
     program.programId
@@ -105,10 +100,10 @@ async function deriveBuyDataAddress(
 
 async function deriveSellDataAddress(
   program,
-  fundAddress: web3.PublicKey,
-  seller: web3.PublicKey,
-  fundName: string
-): Promise<[sellDataAddress: web3.PublicKey, bump: number]> {
+  fundAddress,
+  seller,
+  fundName
+) {
   const [sellDataAddress, bump] = await anchor.web3.PublicKey.findProgramAddress(
     [Buffer.from("akura sell data"), fundAddress.toBytes(), seller.toBytes()],
     program.programId
@@ -117,9 +112,9 @@ async function deriveSellDataAddress(
 }
 
 async function genRemainingCreateAccounts(
-  fundAddress: web3.PublicKey,
-  assets: [{mint: web3.PublicKey, market: any, vaultSigner: web3.PublicKey, openOrders: web3.PublicKey}]
-): Promise<any> {
+  fundAddress,
+  assets,
+) {
   let res = [];
   for(let asset of assets){
     let ata = await serumAta.getAssociatedTokenAddress(fundAddress, asset.mint);
@@ -132,9 +127,9 @@ async function genRemainingCreateAccounts(
 }
 
 async function genRemainingBuyAccounts(
-  fundAddress: web3.PublicKey,
-  asset: {mint: web3.PublicKey, market: any, vaultSigner: web3.PublicKey, openOrders: web3.PublicKey}
-): Promise<any> {
+  fundAddress,
+  asset
+) {
   let res = [];
   let assetAta = await serumAta.getAssociatedTokenAddress(fundAddress, asset.mint);
   res.push({pubkey: asset.market._decoded.ownAddress, isSigner: false, isWritable: true});

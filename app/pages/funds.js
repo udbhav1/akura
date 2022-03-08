@@ -2,7 +2,7 @@ import Head from 'next/head'
 import styles from '../styles/Home.module.css'
 import Link from "next/link";
 import Navbar from "../components/Navbar"
-import SendOneLamportToRandomAddress from '../components/send';
+import InitDex from '../components/send';
 
 export default function Funds() {
   return (
@@ -19,7 +19,7 @@ export default function Funds() {
       <p>test</p>
       <p>test</p>
       <p>test</p>
-      <SendOneLamportToRandomAddress />
+      <InitDex />
       <p>test</p>
       <p>test</p>
       <p>test</p>

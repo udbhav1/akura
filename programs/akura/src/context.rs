@@ -4,6 +4,18 @@ use anchor_spl::associated_token::AssociatedToken;
 use crate::account::*;
 
 #[derive(Accounts)]
+pub struct TestRpc<'info> {
+    #[account(
+        init,
+        payer=creator,
+    )]
+    pub acc: Account<'info, Acc>,
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 #[instruction(
     name: [u8; 30],
     symbol: [u8; 4],

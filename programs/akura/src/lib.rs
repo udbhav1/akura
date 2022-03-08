@@ -16,6 +16,17 @@ declare_id!("4CZ51joXxrsSXBQLXVPS5qbFsXyMCxw3NvGYYPpcmYWo");
 #[program]
 pub mod akura {
     use super::*;
+
+    pub fn test_rpc(
+        ctx: Context<TestRpc>,
+        amount: u64,
+    ) -> ProgramResult {
+        let acc = &mut ctx.accounts.acc;
+        
+        acc.stored = amount;
+
+        Ok(())
+    }
     pub fn create_fund<'info>(
         ctx: Context<'_, '_, '_, 'info, CreateFund<'info>>,
         name: [u8; 30],

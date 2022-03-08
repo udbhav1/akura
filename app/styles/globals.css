@@ -80,7 +80,7 @@ nav > div {
 
 .navbarLogo {
   margin-top: 10px;
-  font-size: 20px;
+  cursor: pointer;
 }
 
 .navbarLogo img {
@@ -118,8 +118,13 @@ nav > div {
 
 .navbarLinks a:hover {
   color: #fff;
-  border-image: url('../public/solanaGradient.png') 100 100;
-  border-bottom: 3px solid;
+  /* border-image: url('../public/solanaGradient.png') 100 100;
+  border-bottom: 3px solid; */
+
+  /* background-image: url('../public/solanaGradient.png');
+  background-size: 100%;
+  background-clip: text;
+  -webkit-text-fill-color: transparent; */
 }
 
 .navbarWallet {
