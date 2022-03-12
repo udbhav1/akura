@@ -14,11 +14,10 @@ export default function Home() {
       <div className="landing">
         <h1><b>AKURA</b></h1>
         <p>Trustless asset management through index funds and ETFs</p>
-        <Link href="/funds">
+        <Link href="/browse">
           <button>Launch App</button>
         </Link>
       </div>
-
 
       <footer className={styles.footer}>
       </footer>

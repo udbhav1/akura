@@ -19,8 +19,8 @@ const Navbar = () => {
         </Link>
 
         <div className="navbarLinks">
-            <Link href="/funds">
-                <a className={location == "/funds" ? "active" : ""}>BROWSE</a>
+            <Link href="/browse">
+                <a className={location == "/browse" ? "active" : ""}>BROWSE</a>
             </Link>
             <Link href="/create">
                 <a className={location == "/create" ? "active" : ""}>CREATE</a>

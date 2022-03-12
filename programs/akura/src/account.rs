@@ -25,6 +25,9 @@ pub struct Fund {
     // doubles as tvl since its 1:1 with deposit currency
     pub index_token_supply: u64,
 
+    // creation timestamp
+    pub genesis: u64,
+
     pub fund_bump: u8,
 }
 

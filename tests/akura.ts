@@ -178,7 +178,7 @@ describe('akura', () => {
     // CREATE FUND
     console.log("creating fund");
 
-    let fundName = "defi index";
+    let fundName = "DeFi Index";
     let fundSymbol = "DEFI";
     let num_assets = 2;
     assets = [
@@ -252,16 +252,41 @@ describe('akura', () => {
     // WRITE TO JSON
     // TODO add all relevant accounts for *everything* and only store readable pubkeys/keypairs
     let json = {
-        marketMaker: MARKET_MAKER,
-        mintOwner: mintOwner,
+        marketMaker: MARKET_MAKER.account.publicKey,
+        mintOwner: mintOwner.publicKey,
         USDC_MINT: USDC_MINT.publicKey,
         MNGO_MINT: MNGO_MINT.publicKey,
         RAY_MINT: RAY_MINT.publicKey,
-        MARKET_MNGO_USDC: MARKET_MNGO_USDC,
-        MARKET_RAY_USDC: MARKET_RAY_USDC,
+        MARKET_MNGO_USDC: MARKET_MNGO_USDC._decoded.ownAddress,
+        MARKET_RAY_USDC: MARKET_RAY_USDC._decoded.ownAddress,
+        marketMngoVaultSigner: marketMngoVaultSigner,
+        marketRayVaultSigner: marketRayVaultSigner,
+        openOrdersMngo: openOrdersMngo.publicKey,
+        openOrdersRay: openOrdersRay.publicKey,
     }
     // console.log(JSON.stringify(json));
-    fs.writeFileSync('./app/serumData.json', JSON.stringify(json));
+    fs.writeFileSync('./app/localAccounts.json', JSON.stringify(json));
+
+    assets = [
+      {
+        mint: MNGO_MINT.publicKey,
+        market: MARKET_MNGO_USDC,
+        vaultSigner: marketMngoVaultSigner,
+        openOrders: openOrdersMngo.publicKey
+      },
+      {
+        mint: RAY_MINT.publicKey,
+        market: MARKET_RAY_USDC,
+        vaultSigner: marketRayVaultSigner,
+        openOrders: openOrdersRay.publicKey
+      }
+    ];
+
+    console.log(MARKET_MNGO_USDC);
+    for(let asset of assets) {
+      let remainingAccounts = await utils.genRemainingBuyAccounts(fundAddress, asset);
+      console.log(remainingAccounts);
+    }
 
   });
 

@@ -53,8 +53,11 @@ pub mod akura {
 
         fund.index_token_mint = index_token_mint.key();
         fund.index_token_supply = 0;
-        fund.mint_bump = *ctx.bumps.get("index_token_mint").unwrap();
 
+        let clock: Clock = Clock::get().unwrap();
+        fund.genesis = clock.unix_timestamp as u64;
+
+        fund.mint_bump = *ctx.bumps.get("index_token_mint").unwrap();
         fund.fund_bump = *ctx.bumps.get("fund").unwrap();
 
         let remaining = ctx.remaining_accounts.len();

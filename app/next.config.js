@@ -14,6 +14,15 @@ const nextConfig = {
 
     return config;
   },
+  async redirects() {
+    return [
+      {
+        source: '/fund',
+        destination: '/browse',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

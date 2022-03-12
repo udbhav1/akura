@@ -5,7 +5,6 @@ import { Program, Provider, web3, BN } from '@project-serum/anchor';
 import * as splToken from '@solana/spl-token';
 import idl from '../public/idl.json';
 import localAccounts from '../localAccounts.json';
-import * as addresses from '../addresses.js';
 import React, { useCallback } from 'react';
 
 const utils = require("../utils");
@@ -16,8 +15,7 @@ const opts = {
   preflightCommitment: "processed"
 }
 
-const InitDex = () => {
-    // const { connection } = useConnection();
+const InitBuyData = () => {
     const anchorWallet = useAnchorWallet();
 
     async function getProvider() {
@@ -41,41 +39,45 @@ const InitDex = () => {
     }
 
     async function initBuyData(program, userPublicKey) {
-
         try {
-
-            // should already be init'ed or else sending usdc isnt possible
             let usdc = new PublicKey(localAccounts.USDC_MINT);
             let buyerUsdcAta = await findAssociatedTokenAddress(userPublicKey, usdc);
             console.log(buyerUsdcAta.toBase58());
             // will be init'ed by the program
 
-            // let buyerFundAta = await findAssociatedTokenAddress(userPublicKey, fundTokenMint);
 
             let temp = await utils.getTokenBalance(program, buyerUsdcAta);
             console.log(temp);
 
-            // buyAmount = utils.usdc(100);
-            // console.log("amount to buy: ", buyAmount);
-
-            // [buyDataAddress, buyDataBump] = await utils.deriveBuyDataAddress(
-            //     program,
-            //     fundAddress,
-            //     buyer.publicKey,
-            // );
-
-            // await program.rpc.initBuyData(new anchor.BN(buyAmount), {
-            //     accounts: {
-            //         fund: fundAddress,
-            //         buyData: buyDataAddress,
-            //         buyer: buyer.publicKey,
-            //         systemProgram: anchor.web3.SystemProgram.programId,
-            //     },
-            //     signers: [buyer]
-            // });
+            let buyAmount = utils.usdc(100);
+            console.log("amount to buy: ", buyAmount);
 
             const fundAccounts = await program.account.fund.all();
             console.log(fundAccounts);
+
+            let fundAddress = fundAccounts[0].publicKey;
+
+            let fundTokenMint = fundAccounts[0].account.indexTokenMint;
+
+            let [buyDataAddress, buyDataBump] = await utils.deriveBuyDataAddress(
+                program,
+                fundAddress,
+                userPublicKey,
+            );
+
+            await program.rpc.initBuyData(new BN(buyAmount), {
+                accounts: {
+                    fund: fundAddress,
+                    buyData: buyDataAddress,
+                    buyer: userPublicKey,
+                    systemProgram: SystemProgram.programId,
+                },
+                signers: []
+            });
+
+            // let buyerFundAta = await findAssociatedTokenAddress(userPublicKey, fundTokenMint);
+            // temp = await utils.getTokenBalance(program, buyerFundAta);
+            // console.log(temp)
 
         } catch (err) {
             console.log("Transaction error: ", err);
@@ -88,27 +90,6 @@ const InitDex = () => {
         let userPublicKey = anchorWallet.publicKey;
         const provider = await getProvider();
         const program = new Program(idl, programID, provider);
-        // console.log(program);
-        // console.log(provider);
-        // console.log(anchorWallet);
-
-        // try {
-        //     let accTemp = web3.Keypair.generate();
-        //     await program.rpc.testRpc(new BN(82347), {
-        //         accounts: {
-        //             acc: accTemp.publicKey,
-        //             creator: anchorWallet.publicKey,
-        //             systemProgram: SystemProgram.programId,
-        //         },
-        //         signers: [accTemp]
-        //     });
-
-        //     const accAccounts = await program.account.acc.all();
-        //     console.log(accAccounts);
-        //     console.log(accAccounts[0].account.stored.toString());
-        //   } catch (err) {
-        //     console.log("Transaction error: ", err);
-        // }
 
         await initBuyData(program, userPublicKey);
 
@@ -121,4 +102,4 @@ const InitDex = () => {
     );
 };
 
-export default InitDex
+export default InitBuyData
