@@ -2,7 +2,6 @@ import Head from 'next/head'
 import styles from '../styles/Home.module.css'
 import Link from "next/link";
 import Navbar from "../components/Navbar"
-import InitBuyData from '../components/send';
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
 import { useAnchorWallet, useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { Keypair, SystemProgram, Transaction, Connection, PublicKey } from '@solana/web3.js';
@@ -13,7 +12,6 @@ import localAccounts from '../localAccounts.json';
 import React, { useState, useEffect } from 'react';
 
 const utils = require("../utils");
-const serumUtils = require("../serumUtils");
 
 const programID = new PublicKey(idl.metadata.address);
 const opts = {
@@ -74,13 +72,13 @@ export default function Browse() {
       let usdc = await getTokenAmount(program, userPublicKey, usdcMint);
       setUserUsdc(usdc);
 
-      let mngoMint = new PublicKey(localAccounts.MNGO_MINT);
-      let mngo = await getTokenAmount(program, userPublicKey, mngoMint);
-      setUserMngo(mngo);
+      // let mngoMint = new PublicKey(localAccounts.MNGO_MINT);
+      // let mngo = await getTokenAmount(program, userPublicKey, mngoMint);
+      // setUserMngo(mngo);
 
-      let rayMint = new PublicKey(localAccounts.RAY_MINT);
-      let ray = await getTokenAmount(program, userPublicKey, rayMint);
-      setUserRay(ray);
+      // let rayMint = new PublicKey(localAccounts.RAY_MINT);
+      // let ray = await getTokenAmount(program, userPublicKey, rayMint);
+      // setUserRay(ray);
     }
 
     if(anchorWallet) {
@@ -143,7 +141,7 @@ export default function Browse() {
 
       {anchorWallet ? (
         <div>
-          <p>{userUsdc} USDC, {userMngo} MNGO, {userRay} RAY</p>
+          <p>{userUsdc} USDC</p>
           <div className="fundsContainer">
             {funds.map((fund, index) =>
               <Link href={`/fund/${encodeURIComponent(fund.publicKey)}`} key={index}>
@@ -159,12 +157,6 @@ export default function Browse() {
           <h1>Connect Wallet to Browse Funds</h1>
         </div>
       )}
-
-      <InitBuyData />
-      <p>test</p>
-      <p>test</p>
-      <p>test</p>
-      <p>test</p>
 
       <footer className={styles.footer}>
       </footer>

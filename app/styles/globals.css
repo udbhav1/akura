@@ -85,7 +85,7 @@ nav > div {
 }
 
 .navbarLogo img {
-  height: 60px;
+  height: 50px;
   margin-top: 10px;
   margin-left: 30px;
 }
@@ -217,9 +217,114 @@ nav > div {
   color: #000000;
 }
 
+.fundInfoHeader a:link {
+  color: cyan;
+}
+
+.fundInfoHeader a:visited {
+  color: #777;
+}
+
+.fundInfoHeader {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1%;
+}
+
+.fundInfoHeader h2 {
+  margin-top: 0;
+  margin-bottom: 0;
+  width: 45%;
+}
+
+.break {
+  width: 100%;
+  height: 0;
+}
+
+.tokensOwned {
+  width: 50%;
+  text-align: right;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.tokensOwned p {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-size: 20px;
+}
+
 .priceHistory {
-  width: 90%;
+  width: 95%;
   margin: auto;
-  height: 500px;
-  background-color: blue;
+  height: 550px;
+  /* background-color: rgb(8, 7, 13); */
+  border: 1px solid rgb(80, 79, 79);
+  padding-top: 0px;
+}
+
+.priceHistory h2 {
+  margin-left: 3%;
+  margin-top: 2%;
+  margin-bottom: 0px;
+  font-size: 40px;
+}
+
+.tokenInfo {
+  width: 95%;
+  height: 420px;
+  margin: auto;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  border: 1px solid rgb(80, 79, 79);
+}
+
+.tokensContainer {
+  width: 49%;
+  height: 100%;
+  border-right: 1px solid rgb(80, 79, 79);
+}
+
+.tokensContainer h1 {
+  margin-left: 38%;
+}
+
+.tokenList {
+  display: flex;
+  flex-direction: column;
+  padding-left: 20%;
+  padding-top: 5%;
+}
+
+.tokenList .listEntry {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  font-size: 20px;
+  margin-bottom: 5%;
+}
+
+.tokenList .listEntry .logoContainer {
+  width: 10%;
+}
+
+.tokenList .listEntry img {
+  height: 30px;
+}
+
+.tokenList .listEntry .nameContainer {
+  width: 40%;
+}
+
+.tokensPieChart {
+  width: 49%;
+  height: 100%;
+}
+
+.spacer {
+  height: 100px;
 }

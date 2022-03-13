@@ -195,7 +195,7 @@ describe('akura', () => {
         openOrders: openOrdersRay.publicKey
       }
     ];
-    let weights = [new anchor.BN(1), new anchor.BN(1)];
+    let weights = [new anchor.BN(2), new anchor.BN(1)];
     let fundTokenDecimals = 6;
     [fundAddress, fundBump] = await utils.deriveFundAddress(
       program,
@@ -250,43 +250,59 @@ describe('akura', () => {
     await USDC_MINT.mintTo(userUsdcAta.address, mintOwner.publicKey, [], usdcAirdropAmount);
 
     // WRITE TO JSON
-    // TODO add all relevant accounts for *everything* and only store readable pubkeys/keypairs
-    let json = {
+    let localAccounts = {
+        // unused except for usdc mint
         marketMaker: MARKET_MAKER.account.publicKey,
         mintOwner: mintOwner.publicKey,
         USDC_MINT: USDC_MINT.publicKey,
         MNGO_MINT: MNGO_MINT.publicKey,
         RAY_MINT: RAY_MINT.publicKey,
-        MARKET_MNGO_USDC: MARKET_MNGO_USDC._decoded.ownAddress,
-        MARKET_RAY_USDC: MARKET_RAY_USDC._decoded.ownAddress,
-        marketMngoVaultSigner: marketMngoVaultSigner,
-        marketRayVaultSigner: marketRayVaultSigner,
-        openOrdersMngo: openOrdersMngo.publicKey,
-        openOrdersRay: openOrdersRay.publicKey,
+
+        // necessary
+        tokens: {
+          [MNGO_MINT.publicKey.toBase58()]: {
+            MARKET_ADDRESS: MARKET_MNGO_USDC._decoded.ownAddress,
+            marketVaultSigner: marketMngoVaultSigner,
+            openOrders: openOrdersMngo.publicKey,
+            name: "MNGO",
+            priceData: "mango-prices.json"
+          },
+
+          [RAY_MINT.publicKey.toBase58()]: {
+            MARKET_ADDRESS: MARKET_RAY_USDC._decoded.ownAddress,
+            marketVaultSigner: marketRayVaultSigner,
+            openOrders: openOrdersRay.publicKey,
+            name: "RAY",
+            priceData: "raydium-prices.json"
+          }
+        }
     }
+    let json = JSON.stringify(localAccounts);
+
     // console.log(JSON.stringify(json));
-    fs.writeFileSync('./app/localAccounts.json', JSON.stringify(json));
+    fs.writeFileSync('./app/localAccounts.json', json);
 
-    assets = [
-      {
-        mint: MNGO_MINT.publicKey,
-        market: MARKET_MNGO_USDC,
-        vaultSigner: marketMngoVaultSigner,
-        openOrders: openOrdersMngo.publicKey
-      },
-      {
-        mint: RAY_MINT.publicKey,
-        market: MARKET_RAY_USDC,
-        vaultSigner: marketRayVaultSigner,
-        openOrders: openOrdersRay.publicKey
-      }
-    ];
+    // 1644707104 1647126321
+    // assets = [
+    //   {
+    //     mint: MNGO_MINT.publicKey,
+    //     market: MARKET_MNGO_USDC,
+    //     vaultSigner: marketMngoVaultSigner,
+    //     openOrders: openOrdersMngo.publicKey
+    //   },
+    //   {
+    //     mint: RAY_MINT.publicKey,
+    //     market: MARKET_RAY_USDC,
+    //     vaultSigner: marketRayVaultSigner,
+    //     openOrders: openOrdersRay.publicKey
+    //   }
+    // ];
 
-    console.log(MARKET_MNGO_USDC);
-    for(let asset of assets) {
-      let remainingAccounts = await utils.genRemainingBuyAccounts(fundAddress, asset);
-      console.log(remainingAccounts);
-    }
+    // console.log(MARKET_MNGO_USDC);
+    // for(let asset of assets) {
+    //   let remainingAccounts = await utils.genRemainingBuyAccounts(fundAddress, asset);
+    //   console.log(remainingAccounts);
+    // }
 
   });
 

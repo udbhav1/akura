@@ -9,10 +9,42 @@ import { Keypair, SystemProgram, Connection, PublicKey, SYSVAR_RENT_PUBKEY } fro
 import { Program, Provider, web3, BN } from '@project-serum/anchor';
 import { Market } from '@project-serum/serum';
 import * as splToken from '@solana/spl-token';
+import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts';
+import React, { useState, useEffect } from 'react';
+
 import idl from '../../public/idl.json';
 import localAccounts from '../../localAccounts.json';
-import React, { useState, useEffect, useCallback } from 'react';
-import { setConstantValue } from 'typescript';
+import mangoPrices from '../../public/prices/mango-prices.json';
+import raydiumPrices from '../../public/prices/raydium-prices.json';
+import serumPrices from '../../public/prices/serum-prices.json';
+import solanaPrices from '../../public/prices/solana-prices.json';
+
+const COLORS = ['#0088FE', '#900000', '#FFBB28', '#FF8042'];
+
+let tokenToPrice = {}
+let tokenToName = {}
+let nameToToken = {}
+let nameToImage = {}
+
+for(let token in localAccounts.tokens){
+  let address = token;
+  let name = localAccounts.tokens[token].name;
+  tokenToName[address] = name;
+  nameToToken[name] = address;
+  switch(name) {
+    case "MNGO":
+      tokenToPrice[address] = mangoPrices.prices;
+      nameToImage[name] = "/tokenLogos/mangoLogo.png";
+    break;
+    case "RAY":
+      tokenToPrice[address] = raydiumPrices.prices;
+      nameToImage[name] = "/tokenLogos/raydiumLogo.png";
+    break;
+  }
+}
+// console.log(tokenToPrice);
+// console.log(tokenToName);
+// console.log(nameToToken);
 
 const utils = require("../../utils");
 const serumUtils = require("../../serumUtils");
@@ -28,6 +60,10 @@ export default function Fund() {
   const { fundId } = router.query;
   const anchorWallet = useAnchorWallet();
   const [fundData, setFundData] = useState(null);
+  const [fundPrice, setFundPrice] = useState(null);
+  const [subtokenInfo, setSubtokenInfo] = useState(null);
+  const [currentVal, setCurrentVal] = useState(0);
+  const [buyData, setBuyData] = useState(null);
   const [userUsdc, setUserUsdc] = useState(0);
   const [userMngo, setUserMngo] = useState(0);
   const [userRay, setUserRay] = useState(0);
@@ -35,8 +71,48 @@ export default function Fund() {
   const [traded, setTraded] = useState(0);
 
   function timestampToDate(ts) {
-    let date = new Date(ts*1000);
-    console.log(date);
+    let date = new Date(ts);
+    let suffix = " AM"
+    let hours = date.getUTCHours();
+    if(hours >= 12){
+      suffix = " PM";
+      hours -= 12;
+    }
+    return hours.toString() + ":" + date.getUTCMinutes() + suffix + ", " + (date.getMonth()+1).toString() + "/" + date.getUTCDate() + "/" + date.getFullYear();
+  }
+
+  function normalizeOnFirst(priceHistory) {
+    let arr = [];
+    let base = priceHistory[0][1];
+    for(let step of priceHistory){
+      let [ts, val] = step;
+      arr.push([ts, val/base]);
+    }
+    return arr;
+  }
+
+  function getPieChartInfo(fundData) {
+    let res = [];
+    let totalWeight = fundData.weights.reduce(
+      (prev, current) => prev + current.toNumber(),
+      0
+    );
+    for(let i = 0; i < fundData.numAssets; i++) {
+      let address = fundData.assets[i].toBase58();
+      let name = tokenToName[address];
+      let weight = fundData.weights[i].toNumber()/totalWeight;
+      let ph = tokenToPrice[address]
+      let lastPrice = ph[ph.length - 1][1];
+      res.push({
+        address: address,
+        name: name,
+        weight: weight,
+        lastPrice: lastPrice
+      })
+    }
+    // sort descending
+    res.sort((a, b) => (a.weight < b.weight) ? 1 : -1);
+    return res;
   }
 
   async function getProvider() {
@@ -120,6 +196,7 @@ export default function Fund() {
         publicKey: fundAddress,
         assets: fundAccount.assets,
         weights: fundAccount.weights,
+        numAssets: fundAccount.numAssets,
         indexTokenMint: fundAccount.indexTokenMint,
         indexTokenSupply: fundAccount.indexTokenSupply,
         genesis: fundAccount.genesis,
@@ -127,6 +204,36 @@ export default function Fund() {
         name: utils.u8ToStr(fundAccount.name).replace(/\0.*$/g,''),
         symbol: utils.u8ToStr(fundAccount.symbol).replace(/\0.*$/g,''),
       }));
+
+      // price history calculation
+      let totalWeight = fundAccount.weights.reduce(
+        (prev, current) => prev + current.toNumber(),
+        0
+      );
+      let fundPrices = [];
+      let first = true;
+      for(let i = 0; i < fundAccount.numAssets; i++){
+        let address = fundAccount.assets[i].toBase58();
+        let weight = fundAccount.weights[i].toNumber();
+        let priceHistory = normalizeOnFirst(tokenToPrice[address]);
+        for(let j = 0; j < priceHistory.length; j++){
+          let [ts, val] = priceHistory[j];
+          if(first){
+            fundPrices.push([ts, val*(weight/totalWeight)])
+          } else {
+            fundPrices[j][1] += val*(weight/totalWeight)
+          }
+        }
+        if(first){ first = false }
+      }
+      setFundPrice(old => fundPrices);
+      setCurrentVal(fundPrices[fundPrices.length-1][1]);
+      // console.log(fundPrice);
+      // console.log(fundData);
+
+      let subtokenInfo = getPieChartInfo(fundAccount);
+      setSubtokenInfo(old => subtokenInfo);
+
     }
 
     if(anchorWallet != undefined) {
@@ -137,14 +244,23 @@ export default function Fund() {
     }
   }, [traded]);
 
-  async function findBuyData(program, userPublicKey) {
-    let buyDataAccounts = await program.account.buyData.all();
-    for(let acc of buyDataAccounts) {
-      if(userPublicKey.toBase58() == acc.account.buyer.toBase58()){
-        return acc;
-      }
+  useEffect(() => {
+    const getBuyData = async () => {
+      const provider = await getProvider();
+      const program = new Program(idl, programID, provider);
+      let fundAddress = new PublicKey(fundId);
+
+      let [buyDataAddress, buyDataBump] = await utils.deriveBuyDataAddress(
+        program,
+        fundAddress,
+        anchorWallet.publicKey,
+      );
+      setBuyData(buyDataAddress);
     }
-  }
+    if(anchorWallet != undefined) {
+      getBuyData()
+    }
+  }, [])
 
   async function fetchMarket(program, address) {
     let marketAddress = new PublicKey(address);
@@ -159,16 +275,10 @@ export default function Fund() {
 
       let fundAddress = new PublicKey(fundId);
 
-      let [buyDataAddress, buyDataBump] = await utils.deriveBuyDataAddress(
-          program,
-          fundAddress,
-          userPublicKey,
-      );
-
       await program.rpc.initBuyData(new BN(buyAmount), {
           accounts: {
               fund: fundAddress,
-              buyData: buyDataAddress,
+              buyData: buyData,
               buyer: userPublicKey,
               systemProgram: SystemProgram.programId,
           },
@@ -187,7 +297,6 @@ export default function Fund() {
     let fundTokenMint = fundData.indexTokenMint;
     let buyerUsdcAta = await findAssociatedTokenAddress(userPublicKey, usdcMint);
     let buyerIndexAta = await findAssociatedTokenAddress(userPublicKey, fundTokenMint);
-    let buyData = await findBuyData(program, userPublicKey);
 
     try {
       await program.rpc.buyFund({
@@ -198,7 +307,7 @@ export default function Fund() {
           buyer: userPublicKey,
           buyerUsdcAta: buyerUsdcAta,
           buyerIndexAta: buyerIndexAta,
-          buyData: buyData.publicKey,
+          buyData: buyData,
           tokenProgram: splToken.TOKEN_PROGRAM_ID,
           associatedTokenProgram: SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
@@ -225,20 +334,24 @@ export default function Fund() {
     console.log("inited buy account");
 
     let fundAddress = new PublicKey(fundId);
-    let assets = [
-      {
-        mint: new PublicKey(localAccounts.MNGO_MINT),
-        market: await fetchMarket(program, localAccounts.MARKET_MNGO_USDC),
-        vaultSigner: new PublicKey(localAccounts.marketMngoVaultSigner),
-        openOrders: new PublicKey(localAccounts.openOrdersMngo)
-      },
-      {
-        mint: new PublicKey(localAccounts.RAY_MINT),
-        market: await fetchMarket(program, localAccounts.MARKET_RAY_USDC),
-        vaultSigner: new PublicKey(localAccounts.marketRayVaultSigner),
-        openOrders: new PublicKey(localAccounts.openOrdersRay)
-      }
-    ];
+    let assets = []
+    for(let i = 0; i < fundData.numAssets; i++){
+      let address = fundData.assets[i].toBase58();
+      let localData = localAccounts.tokens[address];
+      let market = await fetchMarket(program, localData["MARKET_ADDRESS"]);
+      let mint = address;
+      let vaultSigner = localData.marketVaultSigner;
+      // loading from serum not getting anything so use local value
+      // let openOrders = await market.loadOrdersForOwner(program.provider.connection, fundAddress)[0];
+      let openOrders = localData.openOrders;
+      assets.push({
+        mint: new PublicKey(mint),
+        market: market,
+        vaultSigner: new PublicKey(vaultSigner),
+        openOrders: new PublicKey(openOrders),
+      })
+    }
+    console.log("assets to buy", assets);
     for(let asset of assets) {
       console.log("buying asset", asset);
       let remainingAccounts = await utils.genRemainingBuyAccounts(fundAddress, asset);
@@ -260,7 +373,6 @@ export default function Fund() {
 
       {anchorWallet ? (
         <div>
-          <p>{userUsdc} USDC, {userFund} fund tokens</p>
           {fundData &&
             <div>
               <div className="fundHeader">
@@ -275,10 +387,71 @@ export default function Fund() {
                 </div>
               </div>
               <div className="fundInfoHeader">
-                <p>TVL: ${(fundData.indexTokenSupply.toNumber()/(10**6)).toFixed(2)}</p>
-                <p>Token Address: {fundData.indexTokenMint.toBase58()}</p>
+                <h2>Total Supply: {(fundData.indexTokenSupply.toNumber()/(10**6)).toFixed(2)}</h2>
+                <div className="tokensOwned">
+                  <p><strong>Owned: </strong>{userFund.toFixed(2)}</p>
+                  <p><strong>USDC: </strong>{userUsdc.toFixed(2)}</p>
+                </div>
+                <div className="break"></div>
+                <p>Token Address: <a href={"https://explorer.solana.com/address/" + fundData.indexTokenMint.toBase58() + "?cluster=custom"} target="_blank">{fundData.indexTokenMint.toBase58()}</a></p>
               </div>
-              <div className="priceHistory"></div>
+              {fundPrice &&
+                <div className="priceHistory">
+                  {(currentVal < 1) &&
+                    <h2 style={{color: "red"}}>-{(100*(1 - currentVal)).toFixed(2)}%</h2>
+                  }
+                  {(currentVal > 1) &&
+                    <h2 style={{color: "green"}}>+{(100*(currentVal - 1)).toFixed(2)}%</h2>
+                  }
+                  <ResponsiveContainer width="100%" height="86%">
+                    <LineChart data={fundPrice.map(x => ({"ts": x[0], "price": x[1]}))} onMouseMove={props => { if(props.activeTooltipIndex != undefined) {setCurrentVal(fundPrice[props.activeTooltipIndex][1])} }} onMouseLeave={props => setCurrentVal(fundPrice[fundPrice.length-1][1])}>
+                      <Tooltip cursor={{stroke: "#fff", strokeWidth: 2}} itemStyle={{color: "black"}} labelStyle={{color: "black"}} labelFormatter={(value, name, props) => timestampToDate(fundPrice[value][0])} formatter={(value, name, props) => value.toFixed(3) }/>
+                      <YAxis hide={true} domain={[dataMin => (dataMin*0.9), dataMax => (dataMax*1.05)]}/>
+                      <Line type="monotone" dot={false} dataKey="price" stroke="#888FFF" strokeWidth={2} /> 
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              }
+              {subtokenInfo &&
+                <div className="tokenInfo">
+                  <div className="tokensContainer">
+                    <h1>Assets</h1>
+                    <div className="tokenList">
+                      {subtokenInfo.map((entry, index) => (
+                        <div key={entry.name} className="listEntry">
+                          <div className="logoContainer">
+                            <img src={nameToImage[entry.name]}/>
+                          </div>
+                          <div className="nameContainer">
+                            <a style={{color: COLORS[index % COLORS.length]}}><strong>{entry.name}</strong></a>
+                          </div>
+                          <a>{(entry.weight*100).toFixed(2)}%</a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="tokensPieChart">
+                    <PieChart width={400} height={400} style={{margin: "auto"}}>
+                      <Pie
+                        data={subtokenInfo}
+                        innerRadius={120}
+                        outerRadius={150}
+                        fill="#8884d8"
+                        paddingAngle={5}
+                        dataKey="weight"
+                        nameKey="name"
+                        startAngle={0}
+                        stroke="none"
+                      >
+                        {subtokenInfo.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value, name, props) => value.toFixed(2)} />
+                    </PieChart>
+                  </div>
+                </div>
+            }
             </div>
           }
         </div>
@@ -288,8 +461,7 @@ export default function Fund() {
         </div>
       )}
 
-      <p>PID: {fundId}</p>
-
+      <div className="spacer"></div>
       <footer className={styles.footer}>
       </footer>
     </div>
