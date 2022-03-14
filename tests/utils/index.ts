@@ -124,7 +124,7 @@ async function genRemainingCreateAccounts(
   for(let asset of assets){
     let ata = await serumAta.getAssociatedTokenAddress(fundAddress, asset.mint);
     res.push({pubkey: asset.mint, isSigner: false, isWritable: true});
-    res.push({pubkey: ata, isSigner: false, isWritable: true});
+    // res.push({pubkey: ata, isSigner: false, isWritable: true});
     res.push({pubkey: asset.market._decoded.ownAddress, isSigner: false, isWritable: false});
     res.push({pubkey: asset.openOrders, isSigner: true, isWritable: true});
   }
@@ -147,6 +147,7 @@ async function genRemainingBuyAccounts(
   res.push({pubkey: asset.market._decoded.quoteVault, isSigner: false, isWritable: true});
   res.push({pubkey: asset.vaultSigner, isSigner: false, isWritable: false});
   res.push({pubkey: assetAta, isSigner: false, isWritable: true});
+  res.push({pubkey: asset.mint, isSigner: false, isWritable: false});
   return res;
 }
 

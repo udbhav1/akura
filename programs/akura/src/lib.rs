@@ -62,7 +62,7 @@ pub mod akura {
 
         let remaining = ctx.remaining_accounts.len();
         require!(
-            remaining == (num_assets*4) as usize,
+            remaining == (num_assets*3) as usize,
             Err(AkuraError::InvalidRemainingAccounts.into())
         );
         let remaining_accounts_iter = &mut ctx.remaining_accounts.iter();
@@ -72,20 +72,20 @@ pub mod akura {
             // TODO validate that this is a legitimate mint
             let asset_mint = next_account_info(remaining_accounts_iter)?;
             // TODO validate this is the right address
-            let fund_ata = next_account_info(remaining_accounts_iter)?;
+            // let fund_ata = next_account_info(remaining_accounts_iter)?;
 
             fund.assets[i as usize] = *asset_mint.key;
 
-            create_ata(
-                &manager.to_account_info(),
-                &fund.to_account_info(),
-                &asset_mint.to_account_info(),
-                &fund_ata.to_account_info(),
-                &token_program.to_account_info(),
-                &ata_program.to_account_info(),
-                &system_program.to_account_info(),
-                &rent_sysvar.to_account_info()
-            )?;
+            // create_ata(
+            //     &manager.to_account_info(),
+            //     &fund.to_account_info(),
+            //     &asset_mint.to_account_info(),
+            //     &fund_ata.to_account_info(),
+            //     &token_program.to_account_info(),
+            //     &ata_program.to_account_info(),
+            //     &system_program.to_account_info(),
+            //     &rent_sysvar.to_account_info()
+            // )?;
 
             // set up buying and selling for this asset on serum
             let market = next_account_info(remaining_accounts_iter)?;
@@ -148,10 +148,12 @@ pub mod akura {
         let buyer_index_ata = &ctx.accounts.buyer_index_ata;
         let buy_data = &mut ctx.accounts.buy_data;
         let token_program = &ctx.accounts.token_program;
-        let _system_program = &ctx.accounts.system_program;
+        let ata_program = &ctx.accounts.associated_token_program;
+        let system_program = &ctx.accounts.system_program;
         let dex_program = &ctx.accounts.dex_program;
         let rent_sysvar = &ctx.accounts.rent;
 
+        msg!("BUYING FUND");
         // TODO require buy data has been init'ed properly
         // TODO validate accounts
 
@@ -161,6 +163,8 @@ pub mod akura {
 
         let old_usdc_amount = token::accessor::amount(&fund_usdc_ata.to_account_info())?;
 
+        msg!("TRANSFERRING USDC");
+
         transfer_spl(
             &buyer.to_account_info(),
             &buyer_usdc_ata.to_account_info(),
@@ -169,6 +173,8 @@ pub mod akura {
             &token_program.to_account_info(),
             &[]
         )?;
+
+        msg!("READING REMAINING ACCOUNTS");
 
         let remaining_accounts_iter = &mut ctx.remaining_accounts.iter();
         let market = next_account_info(remaining_accounts_iter)?;
@@ -181,6 +187,22 @@ pub mod akura {
         let pc_vault = next_account_info(remaining_accounts_iter)?;
         let vault_signer = next_account_info(remaining_accounts_iter)?;
         let coin_wallet = next_account_info(remaining_accounts_iter)?;
+        let asset_mint = next_account_info(remaining_accounts_iter)?;
+
+        msg!("CREATING ATA");
+
+        if coin_wallet.to_account_info().data_is_empty() {
+            create_ata(
+                &buyer.to_account_info(),
+                &fund.to_account_info(),
+                &asset_mint.to_account_info(),
+                &coin_wallet.to_account_info(),
+                &token_program.to_account_info(),
+                &ata_program.to_account_info(),
+                &system_program.to_account_info(),
+                &rent_sysvar.to_account_info()
+            )?;
+        }
 
         serum_swap(
             amount,

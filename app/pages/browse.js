@@ -111,9 +111,6 @@ export default function Browse() {
           symbol: utils.u8ToStr(fund.account.symbol).replace(/\0.*$/g,''),
         }
         processed.push(s);
-        processed.push(s);
-        processed.push(s);
-        processed.push(s);
       }
       console.log(processed[0]);
 

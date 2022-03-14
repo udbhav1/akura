@@ -10,14 +10,18 @@ import { Program, Provider, web3, BN } from '@project-serum/anchor';
 import { Market } from '@project-serum/serum';
 import * as splToken from '@solana/spl-token';
 import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts';
+import Modal from 'react-modal';
 import React, { useState, useEffect } from 'react';
 
 import idl from '../../public/idl.json';
 import localAccounts from '../../localAccounts.json';
 import mangoPrices from '../../public/prices/mango-prices.json';
+import orcaPrices from '../../public/prices/orca-prices.json';
 import raydiumPrices from '../../public/prices/raydium-prices.json';
 import serumPrices from '../../public/prices/serum-prices.json';
 import solanaPrices from '../../public/prices/solana-prices.json';
+import solicePrices from '../../public/prices/solice-prices.json';
+import staratlasPrices from '../../public/prices/staratlas-prices.json';
 
 const COLORS = ['#0088FE', '#900000', '#FFBB28', '#FF8042'];
 
@@ -36,9 +40,29 @@ for(let token in localAccounts.tokens){
       tokenToPrice[address] = mangoPrices.prices;
       nameToImage[name] = "/tokenLogos/mangoLogo.png";
     break;
+    case "ORCA":
+      tokenToPrice[address] = orcaPrices.prices;
+      nameToImage[name] = "/tokenLogos/orcaLogo.svg";
+    break;
     case "RAY":
       tokenToPrice[address] = raydiumPrices.prices;
       nameToImage[name] = "/tokenLogos/raydiumLogo.png";
+    break;
+    case "SRM":
+      tokenToPrice[address] = serumPrices.prices;
+      nameToImage[name] = "/tokenLogos/serumLogo.png";
+    break;
+    case "WSOL":
+      tokenToPrice[address] = solanaPrices.prices;
+      nameToImage[name] = "/tokenLogos/solanaLogo.png";
+    break;
+    case "SLC":
+      tokenToPrice[address] = solicePrices.prices;
+      nameToImage[name] = "/tokenLogos/soliceLogo.png";
+    break;
+    case "ATLAS":
+      tokenToPrice[address] = staratlasPrices.prices;
+      nameToImage[name] = "/tokenLogos/staratlasLogo.png";
     break;
   }
 }
@@ -64,6 +88,7 @@ export default function Fund() {
   const [subtokenInfo, setSubtokenInfo] = useState(null);
   const [currentVal, setCurrentVal] = useState(0);
   const [buyData, setBuyData] = useState(null);
+  const [sellData, setSellData] = useState(null);
   const [userUsdc, setUserUsdc] = useState(0);
   const [userMngo, setUserMngo] = useState(0);
   const [userRay, setUserRay] = useState(0);
@@ -212,11 +237,13 @@ export default function Fund() {
       );
       let fundPrices = [];
       let first = true;
+      let minL = Math.pow(10, 1000);
       for(let i = 0; i < fundAccount.numAssets; i++){
         let address = fundAccount.assets[i].toBase58();
         let weight = fundAccount.weights[i].toNumber();
         let priceHistory = normalizeOnFirst(tokenToPrice[address]);
-        for(let j = 0; j < priceHistory.length; j++){
+        minL = Math.min(minL, priceHistory.length);
+        for(let j = 0; j < minL; j++){
           let [ts, val] = priceHistory[j];
           if(first){
             fundPrices.push([ts, val*(weight/totalWeight)])
@@ -226,6 +253,7 @@ export default function Fund() {
         }
         if(first){ first = false }
       }
+      fundPrices = fundPrices.slice(0, minL);
       setFundPrice(old => fundPrices);
       setCurrentVal(fundPrices[fundPrices.length-1][1]);
       // console.log(fundPrice);
@@ -245,7 +273,7 @@ export default function Fund() {
   }, [traded]);
 
   useEffect(() => {
-    const getBuyData = async () => {
+    const getBuySellData = async () => {
       const provider = await getProvider();
       const program = new Program(idl, programID, provider);
       let fundAddress = new PublicKey(fundId);
@@ -255,10 +283,16 @@ export default function Fund() {
         fundAddress,
         anchorWallet.publicKey,
       );
+      let [sellDataAddress, sellDataBump] = await utils.deriveSellDataAddress(
+        program,
+        fundAddress,
+        anchorWallet.publicKey,
+      );
       setBuyData(buyDataAddress);
+      setSellData(sellDataAddress);
     }
     if(anchorWallet != undefined) {
-      getBuyData()
+      getBuySellData()
     }
   }, [])
 
@@ -268,9 +302,9 @@ export default function Fund() {
     return market;
   }
 
-  async function initBuyData(program, userPublicKey) {
+  async function initBuyData(program, userPublicKey, amount) {
     try {
-      let buyAmount = utils.usdc(100);
+      let buyAmount = utils.usdc(amount);
       console.log("amount to buy: ", buyAmount);
 
       let fundAddress = new PublicKey(fundId);
@@ -303,6 +337,7 @@ export default function Fund() {
         accounts: {
           fund: fundAddress,
           fundUsdcAta: fundUsdcAta,
+          curMint: usdcMint,
           indexTokenMint: fundTokenMint,
           buyer: userPublicKey,
           buyerUsdcAta: buyerUsdcAta,
@@ -322,14 +357,14 @@ export default function Fund() {
     }
   }
 
-  async function initAndBuy() {
+  async function initAndBuy(amount) {
     if (!anchorWallet) throw new WalletNotConnectedError();
 
     let userPublicKey = anchorWallet.publicKey;
     const provider = await getProvider();
     const program = new Program(idl, programID, provider);
 
-    await initBuyData(program, userPublicKey);
+    await initBuyData(program, userPublicKey, amount);
 
     console.log("inited buy account");
 
@@ -355,10 +390,114 @@ export default function Fund() {
     for(let asset of assets) {
       console.log("buying asset", asset);
       let remainingAccounts = await utils.genRemainingBuyAccounts(fundAddress, asset);
+      console.log("remaining accounts", remainingAccounts);
       await buyFund(program, userPublicKey, remainingAccounts);
     }
 
     setTraded(traded+1);
+  }
+
+  async function initSellData(program, userPublicKey, amount) {
+    try {
+      let sellAmount = utils.usdc(amount);
+      console.log("amount to sell: ", sellAmount);
+
+      let fundAddress = new PublicKey(fundId);
+
+      await program.rpc.initSellData(new BN(sellAmount), {
+          accounts: {
+              fund: fundAddress,
+              sellData: sellData,
+              seller: userPublicKey,
+              systemProgram: SystemProgram.programId,
+          },
+          signers: []
+      });
+
+    } catch (err) {
+        console.log("Transaction error: ", err);
+    }
+  }
+
+  async function sellFund(program, userPublicKey, remainingAccounts) {
+    let fundAddress = new PublicKey(fundId);
+    let usdcMint = new PublicKey(localAccounts.USDC_MINT);
+    let fundUsdcAta = await findAssociatedTokenAddress(fundAddress, usdcMint);
+    let fundTokenMint = fundData.indexTokenMint;
+    let sellerUsdcAta = await findAssociatedTokenAddress(userPublicKey, usdcMint);
+    let sellerIndexAta = await findAssociatedTokenAddress(userPublicKey, fundTokenMint);
+
+    try {
+      await program.rpc.sellFund({
+        accounts: {
+          fund: fundAddress,
+          fundUsdcAta: fundUsdcAta,
+          indexTokenMint: fundTokenMint,
+          seller: userPublicKey,
+          sellerUsdcAta: sellerUsdcAta,
+          sellerIndexAta: sellerIndexAta,
+          sellData: sellData,
+          tokenProgram: splToken.TOKEN_PROGRAM_ID,
+          associatedTokenProgram: SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+          dexProgram: serumUtils.DEX_PID,
+          rent: SYSVAR_RENT_PUBKEY,
+        },
+        signers: [],
+        remainingAccounts,
+      });
+    } catch (err) {
+      console.log("Transaction error: ", err);
+    }
+  }
+
+  async function initAndSell(amount) {
+    if (!anchorWallet) throw new WalletNotConnectedError();
+
+    let userPublicKey = anchorWallet.publicKey;
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+
+    await initSellData(program, userPublicKey, amount);
+
+    console.log("inited sell account");
+
+    let fundAddress = new PublicKey(fundId);
+    let assets = []
+    for(let i = 0; i < fundData.numAssets; i++){
+      let address = fundData.assets[i].toBase58();
+      let localData = localAccounts.tokens[address];
+      let market = await fetchMarket(program, localData["MARKET_ADDRESS"]);
+      let mint = address;
+      let vaultSigner = localData.marketVaultSigner;
+      // loading from serum not getting anything so use local value
+      // let openOrders = await market.loadOrdersForOwner(program.provider.connection, fundAddress)[0];
+      let openOrders = localData.openOrders;
+      assets.push({
+        mint: new PublicKey(mint),
+        market: market,
+        vaultSigner: new PublicKey(vaultSigner),
+        openOrders: new PublicKey(openOrders),
+      })
+    }
+    console.log("assets to sell", assets);
+    for(let asset of assets) {
+      console.log("selling asset", asset);
+      let remainingAccounts = await utils.genRemainingBuyAccounts(fundAddress, asset);
+      await sellFund(program, userPublicKey, remainingAccounts);
+    }
+
+    setTraded(traded+1);
+  }
+
+  async function buy() {
+    let amt = prompt("How much USDC to spend?");
+    await initAndBuy(amt);
+  }
+
+  async function sell() {
+    let amt = prompt("How many fund tokens to sell?");
+    await initAndSell(amt);
   }
 
   return (
@@ -378,10 +517,10 @@ export default function Fund() {
               <div className="fundHeader">
                 <h1>{fundData.name} ({fundData.symbol})</h1>
                 <div className="buyButtonContainer">
-                  <button onClick={initAndBuy} disabled={!anchorWallet}>
+                  <button onClick={buy} disabled={!anchorWallet}>
                     BUY
                   </button>
-                  <button onClick={initAndBuy} disabled={!anchorWallet}>
+                  <button onClick={sell} disabled={!anchorWallet}>
                     SELL
                   </button>
                 </div>
