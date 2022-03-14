@@ -172,10 +172,66 @@ nav > div {
   border: solid 1px;
   border-image: url('../public/solanaGradient.png') 100 100;
   cursor: pointer;
+  display: flex;
+  flex-direction: row;
 }
 
-.fund h2 {
-  text-align: center;
+.fund .fundName {
+  width: 25%;
+  font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-content: center;
+  padding-left: 3%;
+  padding-top: 2%;
+  padding-bottom: 2%;
+}
+
+.fund .fundSupply {
+  width: 10%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-content: center;
+}
+
+.fund .fundPerformance {
+  width: 15%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.fundAssets {
+  width: 50%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.fundAsset {
+  width: 25%;
+  display: flex;
+  flex-direction: row;
+}
+
+.fundAssets .logoContainer {
+  width: 30%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.fundAssets .logoContainer img {
+ height: 30px; 
+}
+
+.fundAssets .nameContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
 .fundHeader {
@@ -215,6 +271,14 @@ nav > div {
   background-color: #ffffff;
   border-color: #000000;
   color: #000000;
+}
+
+.fundInfoHeader .address {
+  margin-bottom: 1%;
+}
+
+.fundInfoHeader .creator {
+  margin-top: 0;
 }
 
 .fundInfoHeader a:link {
@@ -326,5 +390,124 @@ nav > div {
 }
 
 .spacer {
-  height: 100px;
+  height: 200px;
+}
+
+.createContainer {
+  width: 80%;
+  height: 100%;
+  margin: auto;
+  margin-top: 5%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  border: 1px solid rgb(80, 79, 79);
+  padding-left: 5%;
+  padding-right: 5%;
+  padding-bottom: 5%;
+  padding-top: 5%;
+}
+
+.createFundInfo {
+  margin: auto;
+  width: 60%;
+  display: flex;
+  flex-direction: row;
+}
+
+.createFundInfo .nameContainer {
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  font-size: 25px;
+  align-items: center;
+}
+
+.nameInput {
+  font-size: 20px;
+  margin-top: 5%;
+  width: 100%;
+  text-align: center;
+  font-family: "Noto Sans JP";
+}
+
+.createFundInfo .symbolContainer {
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  font-size: 25px;
+  align-items: center;
+}
+
+.symbolInput {
+  font-size: 20px;
+  margin-top: 5%;
+  width: 30%;
+  text-align: center;
+  font-family: "Noto Sans JP";
+}
+
+.createTokenList {
+  width: 50%;
+  display:flex;
+  flex-direction: column;
+}
+
+form {
+  margin-left: 20%;
+  margin-top: 13%;
+}
+
+.tokenEntry {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  font-size: 20px;
+  margin-bottom: 5%;
+}
+
+.tokenEntry .logoContainer {
+  width: 10%;
+}
+
+.tokenEntry img {
+  height: 30px;
+  margin: auto;
+}
+
+.tokenEntry .nameContainer {
+  width: 30%;
+}
+
+.tokenEntry .numInput {
+  width: 15%;
+  height: 23px;
+  font-size: 15px;
+  text-align: center;
+  font-family: "Noto Sans JP";
+}
+
+.chartPreview {
+  width: 50%;
+}
+
+.createButtonContainer {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 5%;
+}
+
+.createButton {
+  font-size: 20px;
+  border: solid 5px;
+  border-image: url('../public/solanaGradient.png') 100 100;
+  background-color: #161424;
+  color: #ffffff;
+  padding: 10px 50px;
+  border-radius: 15px;
+  font-family: "Noto Sans JP";
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
 }

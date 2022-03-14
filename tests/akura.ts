@@ -111,6 +111,15 @@ describe('akura', () => {
   let openOrdersSlc = anchor.web3.Keypair.generate();
   let openOrdersAtlas = anchor.web3.Keypair.generate();
 
+
+  let openOrdersMngo2 = anchor.web3.Keypair.generate();
+  let openOrdersOrca2 = anchor.web3.Keypair.generate();
+  let openOrdersRay2 = anchor.web3.Keypair.generate();
+  let openOrdersSrm2 = anchor.web3.Keypair.generate();
+  let openOrdersWsol2 = anchor.web3.Keypair.generate();
+  let openOrdersSlc2 = anchor.web3.Keypair.generate();
+  let openOrdersAtlas2 = anchor.web3.Keypair.generate();
+
   it.only('set up local accounts', async () => {
   
     let user = new web3.PublicKey("9xvL3NhQCsWxKd8ba1qLYQPbwdmHaA8cgRZgUi5WqCmi");
@@ -436,19 +445,19 @@ describe('akura', () => {
         mint: ATLAS_MINT.publicKey,
         market: MARKET_ATLAS_USDC,
         vaultSigner: marketAtlasVaultSigner,
-        openOrders: openOrdersAtlas.publicKey
+        openOrders: openOrdersAtlas2.publicKey
       },
       {
         mint: SLC_MINT.publicKey,
         market: MARKET_SLC_USDC,
         vaultSigner: marketSlcVaultSigner,
-        openOrders: openOrdersSlc.publicKey
+        openOrders: openOrdersSlc2.publicKey
       },
       {
         mint: WSOL_MINT.publicKey,
         market: MARKET_WSOL_USDC,
         vaultSigner: marketWsolVaultSigner,
-        openOrders: openOrdersWsol.publicKey
+        openOrders: openOrdersWsol2.publicKey
       },
     ];
     weights = [new anchor.BN(40), new anchor.BN(40), new anchor.BN(20)];
@@ -493,15 +502,9 @@ describe('akura', () => {
           dexProgram: serumUtils.DEX_PID,
           rent: web3.SYSVAR_RENT_PUBKEY,
         },
-        signers: [openOrdersWsol, openOrdersAtlas, openOrdersSlc, manager],
+        signers: [openOrdersWsol2, openOrdersAtlas2, openOrdersSlc2, manager],
         remainingAccounts,
     });
-
-    // make sure open orders account is now stored in the market account
-    // let oo = await MARKET_MNGO_USDC.findOpenOrdersAccountsForOwner(program.provider.connection, fundAddress);
-    // assert.equal(oo[0].address.toBase58(), openOrdersMngo.publicKey.toBase58());
-    // oo = await MARKET_RAY_USDC.findOpenOrdersAccountsForOwner(program.provider.connection, fundAddress);
-    // assert.equal(oo[0].address.toBase58(), openOrdersRay.publicKey.toBase58());
 
     // FUND USER
     let userUsdcAta = await USDC_MINT.getOrCreateAssociatedAccountInfo(user);
@@ -519,10 +522,16 @@ describe('akura', () => {
 
         // necessary
         tokens: {
+          [WSOL_MINT.publicKey.toBase58()]: {
+            MARKET_ADDRESS: MARKET_WSOL_USDC._decoded.ownAddress,
+            marketVaultSigner: marketWsolVaultSigner,
+            name: "WSOL",
+            priceData: "solana-prices.json"
+          },
+
           [MNGO_MINT.publicKey.toBase58()]: {
             MARKET_ADDRESS: MARKET_MNGO_USDC._decoded.ownAddress,
             marketVaultSigner: marketMngoVaultSigner,
-            openOrders: openOrdersMngo.publicKey,
             name: "MNGO",
             priceData: "mango-prices.json"
           },
@@ -530,7 +539,6 @@ describe('akura', () => {
           [ORCA_MINT.publicKey.toBase58()]: {
             MARKET_ADDRESS: MARKET_ORCA_USDC._decoded.ownAddress,
             marketVaultSigner: marketOrcaVaultSigner,
-            openOrders: openOrdersOrca.publicKey,
             name: "ORCA",
             priceData: "orca-prices.json"
           },
@@ -538,7 +546,6 @@ describe('akura', () => {
           [RAY_MINT.publicKey.toBase58()]: {
             MARKET_ADDRESS: MARKET_RAY_USDC._decoded.ownAddress,
             marketVaultSigner: marketRayVaultSigner,
-            openOrders: openOrdersRay.publicKey,
             name: "RAY",
             priceData: "raydium-prices.json"
           },
@@ -546,23 +553,13 @@ describe('akura', () => {
           [SRM_MINT.publicKey.toBase58()]: {
             MARKET_ADDRESS: MARKET_SRM_USDC._decoded.ownAddress,
             marketVaultSigner: marketSrmVaultSigner,
-            openOrders: openOrdersSrm.publicKey,
             name: "SRM",
             priceData: "serum-prices.json"
-          },
-
-          [WSOL_MINT.publicKey.toBase58()]: {
-            MARKET_ADDRESS: MARKET_WSOL_USDC._decoded.ownAddress,
-            marketVaultSigner: marketWsolVaultSigner,
-            openOrders: openOrdersWsol.publicKey,
-            name: "WSOL",
-            priceData: "solana-prices.json"
           },
 
           [SLC_MINT.publicKey.toBase58()]: {
             MARKET_ADDRESS: MARKET_SLC_USDC._decoded.ownAddress,
             marketVaultSigner: marketSlcVaultSigner,
-            openOrders: openOrdersSlc.publicKey,
             name: "SLC",
             priceData: "solice-prices.json"
           },
@@ -570,7 +567,6 @@ describe('akura', () => {
           [ATLAS_MINT.publicKey.toBase58()]: {
             MARKET_ADDRESS: MARKET_ATLAS_USDC._decoded.ownAddress,
             marketVaultSigner: marketAtlasVaultSigner,
-            openOrders: openOrdersAtlas.publicKey,
             name: "ATLAS",
             priceData: "staratlas-prices.json"
           },

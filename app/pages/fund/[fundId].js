@@ -1,6 +1,5 @@
 import Head from 'next/head'
 import styles from '../../styles/Home.module.css'
-import Link from "next/link";
 import { useRouter } from "next/router";
 import Navbar from "../../components/Navbar"
 import { WalletNotConnectedError } from '@solana/wallet-adapter-base';
@@ -376,21 +375,19 @@ export default function Fund() {
       let market = await fetchMarket(program, localData["MARKET_ADDRESS"]);
       let mint = address;
       let vaultSigner = localData.marketVaultSigner;
-      // loading from serum not getting anything so use local value
-      // let openOrders = await market.loadOrdersForOwner(program.provider.connection, fundAddress)[0];
-      let openOrders = localData.openOrders;
+      let openOrdersAccount = await market.findOpenOrdersAccountsForOwner(program.provider.connection, fundAddress);
+      let openOrdersAddress = openOrdersAccount[0].address;
       assets.push({
         mint: new PublicKey(mint),
         market: market,
         vaultSigner: new PublicKey(vaultSigner),
-        openOrders: new PublicKey(openOrders),
+        openOrders: openOrdersAddress,
       })
     }
     console.log("assets to buy", assets);
     for(let asset of assets) {
       console.log("buying asset", asset);
       let remainingAccounts = await utils.genRemainingBuyAccounts(fundAddress, asset);
-      console.log("remaining accounts", remainingAccounts);
       await buyFund(program, userPublicKey, remainingAccounts);
     }
 
@@ -470,14 +467,13 @@ export default function Fund() {
       let market = await fetchMarket(program, localData["MARKET_ADDRESS"]);
       let mint = address;
       let vaultSigner = localData.marketVaultSigner;
-      // loading from serum not getting anything so use local value
-      // let openOrders = await market.loadOrdersForOwner(program.provider.connection, fundAddress)[0];
-      let openOrders = localData.openOrders;
+      let openOrdersAccount = await market.findOpenOrdersAccountsForOwner(program.provider.connection, fundAddress);
+      let openOrdersAddress = openOrdersAccount[0].address;
       assets.push({
         mint: new PublicKey(mint),
         market: market,
         vaultSigner: new PublicKey(vaultSigner),
-        openOrders: new PublicKey(openOrders),
+        openOrders: openOrdersAddress,
       })
     }
     console.log("assets to sell", assets);
@@ -532,7 +528,9 @@ export default function Fund() {
                   <p><strong>USDC: </strong>{userUsdc.toFixed(2)}</p>
                 </div>
                 <div className="break"></div>
-                <p>Token Address: <a href={"https://explorer.solana.com/address/" + fundData.indexTokenMint.toBase58() + "?cluster=custom"} target="_blank">{fundData.indexTokenMint.toBase58()}</a></p>
+                <p className="address">Token Address: <a href={"https://explorer.solana.com/address/" + fundData.indexTokenMint.toBase58() + "?cluster=custom"} target="_blank">{fundData.indexTokenMint.toBase58()}</a></p>
+                <div className="break"></div>
+                <p className="creator">Fund Creator: <a href={"https://explorer.solana.com/address/" + fundData.manager.toBase58() + "?cluster=custom"} target="_blank">{fundData.manager.toBase58()}</a></p>
               </div>
               {fundPrice &&
                 <div className="priceHistory">
@@ -576,7 +574,6 @@ export default function Fund() {
                         innerRadius={120}
                         outerRadius={150}
                         fill="#8884d8"
-                        paddingAngle={5}
                         dataKey="weight"
                         nameKey="name"
                         startAngle={0}
@@ -586,7 +583,7 @@ export default function Fund() {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value, name, props) => value.toFixed(2)} />
+                      <Tooltip formatter={(value, name, props) => (100*value).toFixed(2).toString() + "%"} />
                     </PieChart>
                   </div>
                 </div>
