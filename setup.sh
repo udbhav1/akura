@@ -10,6 +10,7 @@ solana config set --url localhost
 yarn install
 
 echo "AIRDROPPING -----------------------------------------------------------------------------"
+solana airdrop 100 $1
 solana airdrop 100 2RALhrsY7uHg55QWGWE9RPXjmMAAtbkGsekE1PZYdDJP
 
 echo "DEPLOYING -------------------------------------------------------------------------------"

@@ -9,6 +9,7 @@ import * as assert from "assert";
 const utils = require("./utils");
 const serumUtils = require("./serumUtils");
 var fs = require('fs');
+import userAddress from '../userAddress.json';
 
 anchor.setProvider(anchor.Provider.env());
 
@@ -122,7 +123,7 @@ describe('akura', () => {
 
   it.only('set up local accounts', async () => {
   
-    let user = new web3.PublicKey("9xvL3NhQCsWxKd8ba1qLYQPbwdmHaA8cgRZgUi5WqCmi");
+    let user = new web3.PublicKey(userAddress.address);
 
     console.log("serum boilerplate");
     let marketMaker = anchor.web3.Keypair.generate();
