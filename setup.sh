@@ -7,8 +7,18 @@
 
 solana config set --url localhost
 
+yarn install
+
 echo "AIRDROPPING -----------------------------------------------------------------------------"
 solana airdrop 100 2RALhrsY7uHg55QWGWE9RPXjmMAAtbkGsekE1PZYdDJP
 
 echo "DEPLOYING -------------------------------------------------------------------------------"
 anchor test --skip-build --skip-local-validator
+
+cd app/
+
+yarn install
+
+yarn build
+
+yarn start
