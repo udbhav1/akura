@@ -5,12 +5,6 @@ pub const MAX_ASSETS: usize = 5;
 
 #[account]
 #[derive(Default)]
-pub struct Acc {
-    pub stored: u64
-}
-
-#[account]
-#[derive(Default)]
 pub struct Fund {
     pub name: [u8; 30],
     pub symbol: [u8; 4],
@@ -22,7 +16,7 @@ pub struct Fund {
 
     pub index_token_mint: Pubkey,
     pub mint_bump: u8,
-    // doubles as tvl since its 1:1 with deposit currency
+
     pub index_token_supply: u64,
 
     // creation timestamp

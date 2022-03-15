@@ -10,6 +10,7 @@ use errors::*;
 use utils::*;
 
 use anchor_spl::token;
+use anchor_spl::associated_token::get_associated_token_address;
 
 declare_id!("4CZ51joXxrsSXBQLXVPS5qbFsXyMCxw3NvGYYPpcmYWo");
 
@@ -17,16 +18,6 @@ declare_id!("4CZ51joXxrsSXBQLXVPS5qbFsXyMCxw3NvGYYPpcmYWo");
 pub mod akura {
     use super::*;
 
-    pub fn test_rpc(
-        ctx: Context<TestRpc>,
-        amount: u64,
-    ) -> ProgramResult {
-        let acc = &mut ctx.accounts.acc;
-        
-        acc.stored = amount;
-
-        Ok(())
-    }
     pub fn create_fund<'info>(
         ctx: Context<'_, '_, '_, 'info, CreateFund<'info>>,
         name: [u8; 30],
@@ -38,11 +29,22 @@ pub mod akura {
         let fund = &mut ctx.accounts.fund;
         let manager = &ctx.accounts.manager;
         let index_token_mint = &ctx.accounts.index_token_mint;
-        let token_program = &ctx.accounts.token_program;
-        let ata_program = &ctx.accounts.associated_token_program;
-        let system_program = &ctx.accounts.system_program;
+        let _token_program = &ctx.accounts.token_program;
+        let _ata_program = &ctx.accounts.associated_token_program;
+        let _system_program = &ctx.accounts.system_program;
         let dex_program = &ctx.accounts.dex_program;
         let rent_sysvar = &ctx.accounts.rent;
+
+        // only first [num_assets] values should be non-zero
+        // second check to ensure no u64 overflows later
+        for i in 0..5 {
+            if i < num_assets {
+                require!(weights[i as usize] > 0, Err(AkuraError::InvalidWeights.into()));
+                require!(weights[i as usize] < 1000000, Err(AkuraError::InvalidWeights.into()))
+            } else {
+                require!(weights[i as usize] == 0, Err(AkuraError::InvalidWeights.into()));
+            }
+        }
 
         fund.name = name;
         fund.symbol = symbol;
@@ -68,26 +70,13 @@ pub mod akura {
         let remaining_accounts_iter = &mut ctx.remaining_accounts.iter();
 
         for i in 0..num_assets {
-            // TODO switch to try_accounts with a new #derive accounts struct with token account validation like crate does
             // TODO validate that this is a legitimate mint
             let asset_mint = next_account_info(remaining_accounts_iter)?;
-            // TODO validate this is the right address
-            // let fund_ata = next_account_info(remaining_accounts_iter)?;
 
             fund.assets[i as usize] = *asset_mint.key;
 
-            // create_ata(
-            //     &manager.to_account_info(),
-            //     &fund.to_account_info(),
-            //     &asset_mint.to_account_info(),
-            //     &fund_ata.to_account_info(),
-            //     &token_program.to_account_info(),
-            //     &ata_program.to_account_info(),
-            //     &system_program.to_account_info(),
-            //     &rent_sysvar.to_account_info()
-            // )?;
-
             // set up buying and selling for this asset on serum
+            // dex program handles validation
             let market = next_account_info(remaining_accounts_iter)?;
             let open_orders = next_account_info(remaining_accounts_iter)?;
 
@@ -152,12 +141,27 @@ pub mod akura {
         let system_program = &ctx.accounts.system_program;
         let dex_program = &ctx.accounts.dex_program;
         let rent_sysvar = &ctx.accounts.rent;
+        
+        // buy_data must match this fund
+        require!(
+            buy_data.fund == fund.to_account_info().key(),
+            Err(AkuraError::InvalidBuyData.into())
+        );
+        // ensure init_buy_data was run first
+        require!(
+            buy_data.amount != 0,
+            Err(AkuraError::InvalidBuyData.into())
+        );
+
+        require!(
+            fund.index_token_mint == index_mint.to_account_info().key(),
+            Err(AkuraError::InvalidFundMint.into())
+        );
 
         msg!("BUYING FUND");
-        // TODO require buy data has been init'ed properly
-        // TODO validate accounts
 
-        // TODO safemath
+        // guaranteed to not overflow on multiplication
+        // total_weight guaranteed to be > 0
         let total_weight: u64 = fund.weights.iter().sum();
         let amount = (fund.weights[buy_data.asset_index as usize]*buy_data.amount)/total_weight;
 
@@ -189,7 +193,20 @@ pub mod akura {
         let coin_wallet = next_account_info(remaining_accounts_iter)?;
         let asset_mint = next_account_info(remaining_accounts_iter)?;
 
-        msg!("CREATING ATA");
+        require!(
+            asset_mint.to_account_info().key() == fund.assets[buy_data.asset_index as usize],
+            Err(AkuraError::WrongTokenMint.into())
+        );
+
+        let fund_asset_ata = get_associated_token_address(
+            &fund.to_account_info().key(),
+            &asset_mint.to_account_info().key()
+        );
+
+        require!(
+            fund_asset_ata == coin_wallet.to_account_info().key(),
+            Err(AkuraError::InvalidFundAta.into())
+        );
 
         if coin_wallet.to_account_info().data_is_empty() {
             create_ata(
@@ -305,6 +322,22 @@ pub mod akura {
         let dex_program = &ctx.accounts.dex_program;
         let rent_sysvar = &ctx.accounts.rent;
 
+        // buy_data must match this fund
+        require!(
+            sell_data.fund == fund.to_account_info().key(),
+            Err(AkuraError::InvalidSellData.into())
+        );
+        // ensure init_buy_data was run first
+        require!(
+            sell_data.amount != 0,
+            Err(AkuraError::InvalidSellData.into())
+        );
+
+        require!(
+            fund.index_token_mint == index_mint.to_account_info().key(),
+            Err(AkuraError::InvalidFundMint.into())
+        );
+
         if sell_data.asset_index == 0 {
 
             msg!("burning index tokens");
@@ -333,11 +366,26 @@ pub mod akura {
         let vault_signer = next_account_info(remaining_accounts_iter)?;
         let coin_wallet = next_account_info(remaining_accounts_iter)?;
 
+        // require!(
+        //     asset_mint.to_account_info().key() == fund.assets[buy_data.asset_index as usize],
+        //     Err(AkuraError::WrongTokenMint.into())
+        // );
+
+        // let fund_asset_ata = get_associated_token_address(
+        //     &fund.to_account_info().key(),
+        //     &asset_mint.to_account_info().key()
+        // );
+
+        // require!(
+        //     fund_asset_ata == coin_wallet.to_account_info().key(),
+        //     Err(AkuraError::InvalidFundAta.into())
+        // );
+
+        // guaranteed to not overflow on multiplication
+        // supply_snapshot can't be zero since this seller at least owns some
         let reserve = token::accessor::amount(&coin_wallet.to_account_info())?;
         let amount = (reserve*sell_data.amount)/sell_data.supply_snapshot;
-        // msg!("reserve: {}", reserve);
-        // msg!("amount to sell: {}", sell_data.amount);
-        // msg!("snapshot: {}", sell_data.supply_snapshot);
+
         msg!("amount to swap: {}", amount);
 
         let old_usdc_amount = token::accessor::amount(&fund_usdc_ata.to_account_info())?;

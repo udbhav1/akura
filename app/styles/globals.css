@@ -218,20 +218,21 @@ nav > div {
 }
 
 .fundAssets .logoContainer {
-  width: 30%;
+  width: 25%;
   display: flex;
   flex-direction: row;
   align-items: center;
 }
 
 .fundAssets .logoContainer img {
- height: 30px; 
+ height: 25px; 
 }
 
 .fundAssets .nameContainer {
   display: flex;
   flex-direction: row;
   align-items: center;
+  font-size: 15px;
 }
 
 .fundHeader {

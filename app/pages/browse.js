@@ -19,8 +19,6 @@ import solanaPrices from '../public/prices/solana-prices.json';
 import solicePrices from '../public/prices/solice-prices.json';
 import staratlasPrices from '../public/prices/staratlas-prices.json';
 
-const COLORS = ['#0088FE', '#900000', '#FFBB28', '#FF8042'];
-
 let tokenToPrice = {}
 let tokenToName = {}
 let nameToToken = {}
@@ -259,7 +257,7 @@ export default function Browse() {
                   </div>
                   <div className="fundAssets">
                     {fund.assets.map((asset, index) =>
-                      <div className="fundAsset">
+                      <div className="fundAsset" key={fund.publicKey.toBase58() + asset.toBase58()}>
                         <div className="logoContainer">
                           <img src={nameToImage[tokenToName[asset.toBase58()]]} />
                         </div>

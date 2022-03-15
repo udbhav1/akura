@@ -22,8 +22,7 @@ import solanaPrices from '../public/prices/solana-prices.json';
 import solicePrices from '../public/prices/solice-prices.json';
 import staratlasPrices from '../public/prices/staratlas-prices.json';
 
-// TODO make 7 colors
-const COLORS = ['#0088FE', '#900000', '#FFBB28', '#FF8042'];
+const COLORS = ['#6a0dad', '#0088FE', '#900000', '#FFBB28', '#50C878', '#FF8042', '#00008b'];
 
 let tokenToPrice = {}
 let tokenToName = {}

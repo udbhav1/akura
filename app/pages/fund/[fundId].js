@@ -22,7 +22,7 @@ import solanaPrices from '../../public/prices/solana-prices.json';
 import solicePrices from '../../public/prices/solice-prices.json';
 import staratlasPrices from '../../public/prices/staratlas-prices.json';
 
-const COLORS = ['#0088FE', '#900000', '#FFBB28', '#FF8042'];
+const COLORS = ['#6a0dad', '#0088FE', '#900000', '#FFBB28', '#50C878', '#FF8042', '#00008b'];
 
 let tokenToPrice = {}
 let tokenToName = {}
@@ -528,9 +528,9 @@ export default function Fund() {
                   <p><strong>USDC: </strong>{userUsdc.toFixed(2)}</p>
                 </div>
                 <div className="break"></div>
-                <p className="address">Token Address: <a href={"https://explorer.solana.com/address/" + fundData.indexTokenMint.toBase58() + "?cluster=custom"} target="_blank">{fundData.indexTokenMint.toBase58()}</a></p>
+                <p className="address">Token Address: <a rel="noreferrer" href={"https://explorer.solana.com/address/" + fundData.indexTokenMint.toBase58() + "?cluster=custom"} target="_blank">{fundData.indexTokenMint.toBase58()}</a></p>
                 <div className="break"></div>
-                <p className="creator">Fund Creator: <a href={"https://explorer.solana.com/address/" + fundData.manager.toBase58() + "?cluster=custom"} target="_blank">{fundData.manager.toBase58()}</a></p>
+                <p className="creator">Fund Creator: <a rel="noreferrer" href={"https://explorer.solana.com/address/" + fundData.manager.toBase58() + "?cluster=custom"} target="_blank">{fundData.manager.toBase58()}</a></p>
               </div>
               {fundPrice &&
                 <div className="priceHistory">

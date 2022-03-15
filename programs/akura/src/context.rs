@@ -4,18 +4,6 @@ use anchor_spl::associated_token::AssociatedToken;
 use crate::account::*;
 
 #[derive(Accounts)]
-pub struct TestRpc<'info> {
-    #[account(
-        init,
-        payer=creator,
-    )]
-    pub acc: Account<'info, Acc>,
-    #[account(mut)]
-    pub creator: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
 #[instruction(
     name: [u8; 30],
     symbol: [u8; 4],
@@ -53,7 +41,7 @@ pub struct CreateFund<'info> {
     #[account(mut)]
     pub manager: Signer<'info>,
 
-    // TODO add check
+    // TODO add check once on devnet/mainnet
     pub usdc_mint: Box<Account<'info, Mint>>,
 
     pub token_program: Program<'info, Token>,
@@ -94,14 +82,21 @@ pub struct InitBuyData<'info> {
 pub struct BuyFund<'info> {
     #[account(mut)]
     pub fund: Box<Account<'info, Fund>>,
+
+    // TODO validate this is the fund's usdc ata once on devnet/mainnet with usdc address
     #[account(mut)]
     pub fund_usdc_ata: Box<Account<'info, TokenAccount>>,
+
     #[account(mut)]
     pub index_token_mint: Box<Account<'info, Mint>>,
+
     #[account(mut)]
     pub buyer: Signer<'info>,
+
+    // TODO validate once on devnet/mainnet with usdc address
     #[account(mut)]
     pub buyer_usdc_ata: Box<Account<'info, TokenAccount>>,
+
     #[account(
         init_if_needed,
         payer = buyer,
@@ -109,8 +104,19 @@ pub struct BuyFund<'info> {
         associated_token::authority = buyer
     )]
     pub buyer_index_ata: Box<Account<'info, TokenAccount>>,
-    #[account(mut)]
+
+    #[account(
+        mut,
+        seeds = [
+            b"akura buy data",
+            fund.to_account_info().key.as_ref(),
+            buyer.to_account_info().key.as_ref()
+        ],
+        bump
+    )]
+
     pub buy_data: Box<Account<'info, BuyData>>,
+
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
@@ -141,18 +147,35 @@ pub struct InitSellData<'info> {
 pub struct SellFund<'info> {
     #[account(mut)]
     pub fund: Box<Account<'info, Fund>>,
+
+    // TODO validate this is the fund's usdc ata once on devnet/mainnet with usdc address
     #[account(mut)]
     pub fund_usdc_ata: Box<Account<'info, TokenAccount>>,
+
     #[account(mut)]
     pub index_token_mint: Box<Account<'info, Mint>>,
+
     #[account(mut)]
     pub seller: Signer<'info>,
+
+    // TODO validate once on devnet/mainnet with usdc address
     #[account(mut)]
     pub seller_usdc_ata: Box<Account<'info, TokenAccount>>,
+
     #[account(mut)]
     pub seller_index_ata: Box<Account<'info, TokenAccount>>,
-    #[account(mut)]
+
+    #[account(
+        mut,
+        seeds = [
+            b"akura sell data",
+            fund.to_account_info().key.as_ref(),
+            seller.to_account_info().key.as_ref()
+        ],
+        bump
+    )]
     pub sell_data: Box<Account<'info, SellData>>,
+
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,

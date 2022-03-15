@@ -439,7 +439,7 @@ describe('akura', () => {
 
     fundName = "Metaverse Index";
     fundSymbol = "MVRS";
-    num_assets = 3;
+    num_assets = 2;
     assets = [
       {
         mint: ATLAS_MINT.publicKey,
@@ -453,14 +453,8 @@ describe('akura', () => {
         vaultSigner: marketSlcVaultSigner,
         openOrders: openOrdersSlc2.publicKey
       },
-      {
-        mint: WSOL_MINT.publicKey,
-        market: MARKET_WSOL_USDC,
-        vaultSigner: marketWsolVaultSigner,
-        openOrders: openOrdersWsol2.publicKey
-      },
     ];
-    weights = [new anchor.BN(40), new anchor.BN(40), new anchor.BN(20)];
+    weights = [new anchor.BN(60), new anchor.BN(40)];
     fundTokenDecimals = 6;
     [fundAddress, fundBump] = await utils.deriveFundAddress(
       program,
@@ -502,7 +496,7 @@ describe('akura', () => {
           dexProgram: serumUtils.DEX_PID,
           rent: web3.SYSVAR_RENT_PUBKEY,
         },
-        signers: [openOrdersWsol2, openOrdersAtlas2, openOrdersSlc2, manager],
+        signers: [openOrdersAtlas2, openOrdersSlc2, manager],
         remainingAccounts,
     });
 
@@ -517,10 +511,7 @@ describe('akura', () => {
         marketMaker: MARKET_MAKER.account.publicKey,
         mintOwner: mintOwner.publicKey,
         USDC_MINT: USDC_MINT.publicKey,
-        // MNGO_MINT: MNGO_MINT.publicKey,
-        // RAY_MINT: RAY_MINT.publicKey,
 
-        // necessary
         tokens: {
           [WSOL_MINT.publicKey.toBase58()]: {
             MARKET_ADDRESS: MARKET_WSOL_USDC._decoded.ownAddress,
@@ -781,11 +772,11 @@ describe('akura', () => {
     temp = await utils.getTokenBalance(program, fundUsdcAta);
     console.log("pre buy fund usdc: ", temp.uiAmount);
 
-    temp = await utils.getTokenBalance(program, fundMngoAta);
-    console.log("pre buy fund mngo: ", temp.uiAmount);
+    // temp = await utils.getTokenBalance(program, fundMngoAta);
+    // console.log("pre buy fund mngo: ", temp.uiAmount);
 
-    temp = await utils.getTokenBalance(program, fundRayAta);
-    console.log("pre buy fund ray: ", temp.uiAmount);
+    // temp = await utils.getTokenBalance(program, fundRayAta);
+    // console.log("pre buy fund ray: ", temp.uiAmount);
 
     for(let asset of assets){
       let remainingAccounts = await utils.genRemainingBuyAccounts(fundAddress, asset);
