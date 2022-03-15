@@ -2,7 +2,9 @@ todo.txt
 keypairs/
 .anchor
 .DS_Store
-target
+target/release
+target/rls
+target/bpfel-unknown-unknown
 test-ledger/
 **/*.rs.bk
 node_modules
