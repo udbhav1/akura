@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # first run 
-# solana-test-validator -r --bpf-program 9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin deps/serum-dex/dex/target/deploy/serum_dex.so
+# solana-test-validator -r --bpf-program 9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin serum_dex.so
 # to preload dex bpf program and save deploy time
 # for some reason i cant interact w the dex program if akura is also deployed this way
 
