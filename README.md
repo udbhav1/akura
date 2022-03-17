@@ -2,13 +2,15 @@
 
 Akura brings permissionless, non-custodial index funds & ETFs to Solana. Anyone can create a fund and earn fees based on how much other users deposit. All funds are tokenized and can be traded on a DEX, used as collateral, or farmed in liquidity pools.
 
-Akura currently uses the Serum orderbook to buy and sell the underlying assets in a fund, but in the future it will also integrate with swap aggregators to get the best prices.
+Akura currently uses the Serum orderbook to buy and sell the underlying assets in a fund, but in the future it can also integrate with swap aggregators to get the best prices.
 
 ## Demo Video
 
+https://youtu.be/Qekq0FKEzBM
+
 ## Run UI Locally
 
-Total setup time should be less than 5 minutes
+Total setup time is 3-4 minutes
 
 ```
 git clone https://github.com/udbhav1/akura && cd akura
